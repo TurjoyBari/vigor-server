@@ -1,0 +1,47 @@
+# Dependencies
+node_modules/
+
+# Environment variables (secrets — never commit)
+.env
+.env.local
+.env.development
+.env.production
+.env.test
+.env*.local
+!.env.example
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Runtime / OS
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Build & test output
+dist/
+build/
+coverage/
+.nyc_output/
+
+# IDE / editor
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Deployment
+.vercel
+
+# MongoDB local dumps
+dump/
+*.mongodb
+
+# Cursor local state
+.cursor/
