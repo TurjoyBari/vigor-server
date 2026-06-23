@@ -8,6 +8,9 @@ const CLASS_STATUSES = {
   REJECTED: "rejected",
 };
 
+const DEFAULT_CLASS_IMAGE =
+  "https://images.unsplash.com/photo-1517836357463-d25dfeac3438?auto=format&fit=crop&w=1200&q=80";
+
 function mapStatusForClient(status) {
   if (status === CLASS_STATUSES.APPROVED) return "published";
   return status;
@@ -21,7 +24,7 @@ function serializeClass(classDoc, trainer = null) {
     trainerId: String(classDoc.trainerId),
     trainer: trainer?.name || classDoc.trainerName || "Unknown Trainer",
     className: classDoc.className,
-    image: classDoc.image || null,
+    image: classDoc.image || DEFAULT_CLASS_IMAGE,
     category: classDoc.category,
     difficulty: classDoc.difficulty,
     duration: classDoc.duration,
@@ -170,7 +173,7 @@ async function createClass(trainerId, payload) {
     trainerId: trainerObjectId,
     trainerName: trainer?.name || "Trainer",
     className: className.trim(),
-    image,
+    image: image?.trim() || DEFAULT_CLASS_IMAGE,
     category: category.trim(),
     difficulty: difficulty.trim(),
     duration: duration.trim(),
@@ -208,6 +211,22 @@ async function getApprovedClasses(filters = {}) {
     ...filters,
     status: CLASS_STATUSES.APPROVED,
   });
+}
+
+/**
+ * Get top featured classes — approved only, sorted by bookingCount desc.
+ */
+async function getFeaturedClasses(limit = 6) {
+  const classes = getCollection(COLLECTIONS.CLASSES);
+  const parsedLimit = Math.min(Math.max(Number(limit) || 6, 1), 20);
+
+  const list = await classes
+    .find({ status: CLASS_STATUSES.APPROVED })
+    .sort({ bookingCount: -1, createdAt: -1 })
+    .limit(parsedLimit)
+    .toArray();
+
+  return attachTrainerNames(list);
 }
 
 /**
@@ -376,6 +395,7 @@ module.exports = {
   createClass,
   getAllClasses,
   getApprovedClasses,
+  getFeaturedClasses,
   getClassById,
   updateClass,
   deleteClass,

@@ -62,6 +62,7 @@ app.use("/api/classes", require("./routes/class.routes"));
 app.use("/api/forum", require("./routes/forum.routes"));
 app.use("/api/bookings", require("./routes/booking.routes"));
 app.use("/api/favorites", require("./routes/favorite.routes"));
+app.use("/api/payments", require("./routes/payment.routes"));
 // ---------------------------------------------------------------------------
 
 // ---------------------------------------------------------------------------

@@ -29,6 +29,25 @@ function serializeBooking(booking, classDoc) {
 }
 
 /**
+ * Check if user has already booked a class.
+ */
+async function checkBooking(userId, classId) {
+  const bookings = getCollection(COLLECTIONS.BOOKINGS);
+  const userObjectId = toObjectId(userId, "userId");
+  const classObjectId = toObjectId(classId, "classId");
+
+  const existing = await bookings.findOne({
+    userId: userObjectId,
+    classId: classObjectId,
+  });
+
+  return {
+    booked: Boolean(existing),
+    bookingId: existing ? String(existing._id) : null,
+  };
+}
+
+/**
  * Book a class for a user (prevents duplicate bookings).
  */
 async function bookClass(userId, classId) {
@@ -127,6 +146,7 @@ async function getBookedClasses(userId) {
 }
 
 module.exports = {
+  checkBooking,
   bookClass,
   getBookedClasses,
 };

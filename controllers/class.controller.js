@@ -24,6 +24,16 @@ async function getApprovedClasses(req, res) {
   );
 }
 
+async function getFeaturedClasses(req, res) {
+  const limit = req.query.limit ? Number(req.query.limit) : 6;
+  const classes = await classService.getFeaturedClasses(limit);
+  return sendSuccess(
+    res,
+    { classes, total: classes.length },
+    "Featured classes fetched successfully"
+  );
+}
+
 async function getClassById(req, res) {
   const classItem = await classService.getClassById(req.params.id);
   return sendSuccess(res, { class: classItem }, "Class fetched successfully");
@@ -83,6 +93,7 @@ module.exports = {
   createClass,
   getAllClasses,
   getApprovedClasses,
+  getFeaturedClasses,
   getClassById,
   updateClass,
   deleteClass,

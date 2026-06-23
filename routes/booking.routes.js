@@ -9,6 +9,13 @@ const router = express.Router();
 router.use(verifyToken, requireRole("user", "trainer", "admin"));
 
 /**
+ * @route   GET /api/bookings/check?classId=
+ * @desc    Check if user already booked a class
+ * @access  Private
+ */
+router.get("/check", asyncHandler(bookingController.checkBooking));
+
+/**
  * @route   POST /api/bookings
  * @desc    Book a class
  * @access  Private

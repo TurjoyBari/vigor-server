@@ -1,6 +1,12 @@
 const favoriteService = require("../services/favorite.service");
 const { sendSuccess, sendCreated } = require("../utils/apiResponse");
 
+async function checkFavorite(req, res) {
+  const { classId } = req.query;
+  const result = await favoriteService.checkFavorite(req.user.userId, classId);
+  return sendSuccess(res, result, "Favorite status checked successfully");
+}
+
 async function addFavorite(req, res) {
   const favorite = await favoriteService.addFavorite(
     req.user.userId,
@@ -24,6 +30,7 @@ async function removeFavorite(req, res) {
 }
 
 module.exports = {
+  checkFavorite,
   addFavorite,
   getFavorites,
   removeFavorite,

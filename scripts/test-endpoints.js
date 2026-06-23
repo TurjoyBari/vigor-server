@@ -136,6 +136,8 @@ async function runTests() {
     role: "trainer",
     body: {
       className: "API Test HIIT",
+      image:
+        "https://images.unsplash.com/photo-1517836357463-d25dfeac3438?auto=format&fit=crop&w=1200&q=80",
       category: "HIIT",
       difficulty: "Intermediate",
       duration: "45 min",
@@ -157,6 +159,7 @@ async function runTests() {
       expectStatus: 200,
     });
     await request("GET", "/classes/approved", { expectStatus: 200 });
+    await request("GET", "/classes/featured", { expectStatus: 200 });
   }
 
   // 5. Bookings

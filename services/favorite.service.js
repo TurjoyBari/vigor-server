@@ -17,6 +17,25 @@ function serializeFavorite(favorite, classDoc) {
 }
 
 /**
+ * Check if a class is in the user's favorites.
+ */
+async function checkFavorite(userId, classId) {
+  const favorites = getCollection(COLLECTIONS.FAVORITES);
+  const userObjectId = toObjectId(userId, "userId");
+  const classObjectId = toObjectId(classId, "classId");
+
+  const existing = await favorites.findOne({
+    userId: userObjectId,
+    classId: classObjectId,
+  });
+
+  return {
+    isFavorite: Boolean(existing),
+    favoriteId: existing ? String(existing._id) : null,
+  };
+}
+
+/**
  * Add class to favorites (prevents duplicates).
  */
 async function addFavorite(userId, classId) {
@@ -104,6 +123,7 @@ async function removeFavorite(userId, favoriteId) {
 }
 
 module.exports = {
+  checkFavorite,
   addFavorite,
   getFavorites,
   removeFavorite,

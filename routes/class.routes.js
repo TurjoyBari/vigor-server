@@ -14,6 +14,13 @@ const router = express.Router();
 router.get("/approved", asyncHandler(classController.getApprovedClasses));
 
 /**
+ * @route   GET /api/classes/featured
+ * @desc    Get top featured classes (approved, highest booking count)
+ * @access  Public
+ */
+router.get("/featured", asyncHandler(classController.getFeaturedClasses));
+
+/**
  * @route   GET /api/classes
  * @desc    Get all classes with search/filter
  * @access  Public (optional auth)

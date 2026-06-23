@@ -9,6 +9,13 @@ const router = express.Router();
 router.use(verifyToken, requireRole("user", "trainer", "admin"));
 
 /**
+ * @route   GET /api/favorites/check?classId=
+ * @desc    Check if class is favorited
+ * @access  Private
+ */
+router.get("/check", asyncHandler(favoriteController.checkFavorite));
+
+/**
  * @route   POST /api/favorites
  * @desc    Add class to favorites
  * @access  Private
