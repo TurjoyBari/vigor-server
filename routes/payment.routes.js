@@ -9,13 +9,23 @@ const router = express.Router();
 router.use(verifyToken, requireRole("user", "trainer", "admin"));
 
 /**
- * @route   POST /api/payments/create-intent
- * @desc    Create Stripe payment intent (placeholder until keys added)
+ * @route   POST /api/payments/create-checkout-session
+ * @desc    Create Stripe Checkout Session
  * @access  Private
  */
 router.post(
-  "/create-intent",
-  asyncHandler(paymentController.createPaymentIntent)
+  "/create-checkout-session",
+  asyncHandler(paymentController.createCheckoutSession)
+);
+
+/**
+ * @route   GET /api/payments/session/:sessionId
+ * @desc    Retrieve checkout session for success page
+ * @access  Private
+ */
+router.get(
+  "/session/:sessionId",
+  asyncHandler(paymentController.getCheckoutSession)
 );
 
 module.exports = router;

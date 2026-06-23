@@ -17,6 +17,7 @@ const COLLECTIONS = {
   FORUM_POSTS: "forumPosts",
   COMMENTS: "comments",
   TRANSACTIONS: "transactions",
+  PAYMENTS: "payments",
 };
 
 let client = null;

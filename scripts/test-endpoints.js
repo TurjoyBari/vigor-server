@@ -229,6 +229,8 @@ async function runTests() {
     body: {
       title: "API Test Post",
       description: "Testing forum endpoints from automated suite.",
+      image:
+        "https://images.unsplash.com/photo-1517836357463-d25dfeac3438?auto=format&fit=crop&w=1200&q=80",
     },
     expectStatus: 201,
   });

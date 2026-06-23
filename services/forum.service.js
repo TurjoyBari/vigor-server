@@ -5,16 +5,23 @@ const { toObjectId } = require("../utils/objectId");
 function serializePost(post) {
   if (!post) return null;
 
+  const likeCount = post.likeCount || 0;
+  const dislikeCount = post.dislikeCount || 0;
+
   return {
+    _id: String(post._id),
     id: String(post._id),
     title: post.title,
     description: post.description,
-    image: post.image || null,
+    image: post.image ?? null,
+    authorName: post.authorName,
     author: post.authorName,
     authorRole: post.authorRole,
     authorId: String(post.authorId),
-    likes: post.likeCount || 0,
-    dislikes: post.dislikeCount || 0,
+    likes: likeCount,
+    dislikes: dislikeCount,
+    likeCount,
+    dislikeCount,
     commentCount: post.commentCount || 0,
     createdAt: post.createdAt,
     updatedAt: post.updatedAt,
@@ -90,7 +97,7 @@ async function createPost(user, payload) {
     authorRole: user.role,
     title: title.trim(),
     description: description.trim(),
-    image,
+    image: image?.trim() || null,
     likedBy: [],
     dislikedBy: [],
     likeCount: 0,

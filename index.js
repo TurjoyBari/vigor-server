@@ -5,6 +5,8 @@ const cors = require("cors");
 const cookieParser = require("cookie-parser");
 const { connectDB, closeDB, isDbConnected } = require("./config/db");
 const { errorHandler, notFoundHandler } = require("./middleware/errorHandler");
+const asyncHandler = require("./utils/asyncHandler");
+const paymentController = require("./controllers/payment.controller");
 
 const app = express();
 
@@ -22,6 +24,13 @@ app.use(
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
   })
+);
+
+// Stripe webhook — raw body (must be before express.json)
+app.post(
+  "/api/payments/webhook",
+  express.raw({ type: "application/json" }),
+  asyncHandler(paymentController.handleStripeWebhook)
 );
 
 app.use(express.json({ limit: "10mb" }));
