@@ -29,4 +29,11 @@ router.post("/", asyncHandler(bookingController.bookClass));
  */
 router.get("/my", asyncHandler(bookingController.getBookedClasses));
 
+/**
+ * @route   GET /api/bookings/user/:userId
+ * @desc    Get bookings for a specific user (own user or admin)
+ * @access  Private
+ */
+router.get("/user/:userId", asyncHandler(bookingController.getBookingsByUserId));
+
 module.exports = router;

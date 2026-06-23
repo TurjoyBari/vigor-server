@@ -22,6 +22,7 @@ function serializePayment(payment) {
     id: String(payment._id),
     userId: String(payment.userId),
     classId: String(payment.classId),
+    transactionId: payment.transactionId,
     stripeSessionId: payment.stripeSessionId,
     stripePaymentIntentId: payment.stripePaymentIntentId || null,
     amount: payment.amount,
@@ -37,60 +38,55 @@ async function getPaymentBySessionId(stripeSessionId) {
 }
 
 /**
- * Create booking + transaction after Stripe confirms payment.
- * Called only from webhook fulfillment (Step 4 will move to booking.service).
+ * Get all payments for a user from MongoDB payments collection only.
+ * No class details — Stripe/payment fields only.
  */
-async function fulfillPaidBooking(userId, classId, paymentMeta) {
+async function getPaymentsByUserId(userId) {
+  const payments = getCollection(COLLECTIONS.PAYMENTS);
+  const userObjectId = toObjectId(userId, "userId");
+
+  const paymentList = await payments
+    .find({ userId: userObjectId })
+    .sort({ createdAt: -1 })
+    .toArray();
+
+  console.log("Payments from DB for user:", userId, paymentList);
+
+  return paymentList.map(serializePayment);
+}
+
+/**
+ * Insert class snapshot into bookings collection (no Stripe/payment fields).
+ */
+async function createBookingSnapshot(userId, classId, classData) {
   const bookings = getCollection(COLLECTIONS.BOOKINGS);
   const classes = getCollection(COLLECTIONS.CLASSES);
-  const transactions = getCollection(COLLECTIONS.TRANSACTIONS);
 
   const userObjectId = toObjectId(userId, "userId");
   const classObjectId = toObjectId(classId, "classId");
-
-  const classDoc = await classes.findOne({ _id: classObjectId });
-  if (!classDoc) {
-    throw new AppError("Class not found", 404);
-  }
 
   const existing = await bookings.findOne({
     userId: userObjectId,
     classId: classObjectId,
   });
 
-  const now = new Date();
-  const transactionId =
-    paymentMeta.stripePaymentIntentId ||
-    paymentMeta.stripeSessionId ||
-    `txn_${Date.now()}`;
-
   if (existing) {
-    if (existing.paymentStatus !== "paid") {
-      await bookings.updateOne(
-        { _id: existing._id },
-        {
-          $set: {
-            paymentStatus: "paid",
-            transactionId,
-            amount: paymentMeta.amount,
-            updatedAt: now,
-          },
-        }
-      );
-    }
-    return bookings.findOne({ _id: existing._id });
+    return existing;
   }
 
-  const amount = paymentMeta.amount ?? (Number(classDoc.price) || 0);
+  const now = new Date();
 
   const bookingDoc = {
     userId: userObjectId,
     classId: classObjectId,
-    transactionId,
-    stripeSessionId: paymentMeta.stripeSessionId,
-    stripePaymentIntentId: paymentMeta.stripePaymentIntentId || null,
-    paymentStatus: "paid",
-    amount,
+    className: classData.className,
+    trainerName: classData.trainerName || classData.trainer || "Unknown Trainer",
+    schedule: classData.schedule || "",
+    category: classData.category || "",
+    difficulty: classData.difficulty || "",
+    duration: classData.duration || "",
+    location: classData.location || "VIGOR Studio",
+    status: "confirmed",
     bookedAt: now,
     createdAt: now,
   };
@@ -101,21 +97,6 @@ async function fulfillPaidBooking(userId, classId, paymentMeta) {
     { _id: classObjectId },
     { $inc: { bookingCount: 1 }, $set: { updatedAt: now } }
   );
-
-  const users = getCollection(COLLECTIONS.USERS);
-  const user = await users.findOne({ _id: userObjectId }, { projection: { email: 1 } });
-
-  await transactions.insertOne({
-    transactionId,
-    userId: userObjectId,
-    userEmail: user?.email || "",
-    classId: classObjectId,
-    amount,
-    status: "completed",
-    type: "Class Booking",
-    stripeSessionId: paymentMeta.stripeSessionId,
-    createdAt: now,
-  });
 
   return bookings.findOne({ _id: result.insertedId });
 }
@@ -177,16 +158,20 @@ async function createCheckoutSession(userId, classId) {
 }
 
 /**
- * Fulfill a completed Checkout Session — save payment + booking.
+ * Fulfill a completed Checkout Session — save payment + booking separately.
  */
 async function fulfillCheckoutSession(session) {
-  console.log("Payment completed:", session);
+  console.log("Stripe Session:", session);
 
   const stripeSessionId = session.id;
 
   const existingPayment = await getPaymentBySessionId(stripeSessionId);
   if (existingPayment) {
     return serializePayment(existingPayment);
+  }
+
+  if (session.payment_status !== "paid") {
+    throw new AppError("Checkout session is not paid", 400);
   }
 
   const userId = session.metadata?.userId;
@@ -196,40 +181,43 @@ async function fulfillCheckoutSession(session) {
     throw new AppError("Checkout session is missing booking metadata", 400);
   }
 
-  if (session.payment_status !== "paid") {
-    throw new AppError("Checkout session is not paid", 400);
-  }
-
   const stripePaymentIntentId =
     typeof session.payment_intent === "string"
       ? session.payment_intent
       : session.payment_intent?.id || null;
 
+  const transactionId = stripePaymentIntentId || stripeSessionId;
   const amount = (session.amount_total || 0) / 100;
   const now = new Date();
+
+  const classData = await classService.getClassById(classId);
+  if (!classData) {
+    throw new AppError("Class not found", 404);
+  }
 
   const payments = getCollection(COLLECTIONS.PAYMENTS);
   const paymentDoc = {
     userId: toObjectId(userId, "userId"),
     classId: toObjectId(classId, "classId"),
+    transactionId,
     stripeSessionId,
     stripePaymentIntentId,
+    paymentStatus: "paid",
     amount,
     currency: session.currency || "usd",
-    paymentStatus: "paid",
     createdAt: now,
   };
 
   const paymentResult = await payments.insertOne(paymentDoc);
+  const savedPayment = await payments.findOne({ _id: paymentResult.insertedId });
 
-  await fulfillPaidBooking(userId, classId, {
-    stripeSessionId,
-    stripePaymentIntentId,
-    amount,
-  });
+  console.log("Payment saved:", savedPayment);
 
-  const saved = await payments.findOne({ _id: paymentResult.insertedId });
-  return serializePayment(saved);
+  const savedBooking = await createBookingSnapshot(userId, classId, classData);
+
+  console.log("Booking saved:", savedBooking);
+
+  return serializePayment(savedPayment);
 }
 
 /**
@@ -293,5 +281,6 @@ module.exports = {
   constructWebhookEvent,
   retrieveCheckoutSession,
   getPaymentBySessionId,
+  getPaymentsByUserId,
   serializePayment,
 };

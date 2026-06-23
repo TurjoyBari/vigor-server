@@ -19,6 +19,20 @@ router.post(
 );
 
 /**
+ * @route   GET /api/payments/my
+ * @desc    Get current user's payments from MongoDB payments collection
+ * @access  Private
+ */
+router.get("/my", asyncHandler(paymentController.getMyPayments));
+
+/**
+ * @route   GET /api/payments/user/:userId
+ * @desc    Get payments for a specific user from MongoDB payments collection
+ * @access  Private (own user or admin)
+ */
+router.get("/user/:userId", asyncHandler(paymentController.getPaymentsByUserId));
+
+/**
  * @route   GET /api/payments/session/:sessionId
  * @desc    Retrieve checkout session for success page
  * @access  Private

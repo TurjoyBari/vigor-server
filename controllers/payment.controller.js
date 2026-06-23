@@ -1,4 +1,5 @@
 const paymentService = require("../services/payment.service");
+const AppError = require("../utils/AppError");
 const { sendSuccess } = require("../utils/apiResponse");
 
 /**
@@ -46,6 +47,40 @@ async function handleStripeWebhook(req, res) {
 }
 
 /**
+ * GET /api/payments/my
+ * Current user's payments from MongoDB payments collection only.
+ */
+async function getMyPayments(req, res) {
+  const payments = await paymentService.getPaymentsByUserId(req.user.userId);
+
+  return sendSuccess(
+    res,
+    { payments, total: payments.length },
+    "User payments fetched successfully"
+  );
+}
+
+/**
+ * GET /api/payments/user/:userId
+ * Payments for a specific user from MongoDB payments collection (own user or admin).
+ */
+async function getPaymentsByUserId(req, res) {
+  const { userId } = req.params;
+
+  if (req.user.role !== "admin" && String(req.user.userId) !== String(userId)) {
+    throw new AppError("You do not have permission to view these payments", 403);
+  }
+
+  const payments = await paymentService.getPaymentsByUserId(userId);
+
+  return sendSuccess(
+    res,
+    { payments, total: payments.length },
+    "User payments fetched successfully"
+  );
+}
+
+/**
  * GET /api/payments/session/:sessionId
  * Success page data after Stripe redirect.
  */
@@ -57,5 +92,7 @@ async function getCheckoutSession(req, res) {
 module.exports = {
   createCheckoutSession,
   handleStripeWebhook,
+  getMyPayments,
+  getPaymentsByUserId,
   getCheckoutSession,
 };
