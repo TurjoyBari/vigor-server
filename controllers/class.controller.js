@@ -16,12 +16,11 @@ async function getAllClasses(req, res) {
 }
 
 async function getApprovedClasses(req, res) {
-  const classes = await classService.getApprovedClasses(req.query);
-  return sendSuccess(
-    res,
-    { classes, total: classes.length },
-    "Approved classes fetched successfully"
-  );
+  console.log(req.query);
+
+  const result = await classService.getApprovedClasses(req.query);
+
+  return sendSuccess(res, result, "Approved classes fetched successfully");
 }
 
 async function getFeaturedClasses(req, res) {

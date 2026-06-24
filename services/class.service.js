@@ -67,8 +67,9 @@ function buildClassQuery(filters = {}) {
     }
   }
 
-  if (filters.category) {
-    const categories = String(filters.category)
+  const categoryInput = filters.categories ?? filters.category;
+  if (categoryInput) {
+    const categories = String(categoryInput)
       .split(",")
       .map((item) => item.trim())
       .filter(Boolean);
@@ -83,11 +84,11 @@ function buildClassQuery(filters = {}) {
     query.difficulty = levels.length === 1 ? levels[0] : { $in: levels };
   }
 
-  if (filters.search) {
-    const regex = new RegExp(filters.search.trim(), "i");
-    andConditions.push({
-      $or: [{ className: regex }, { description: regex }, { category: regex }],
-    });
+  if (filters.search?.trim()) {
+    query.className = {
+      $regex: filters.search.trim(),
+      $options: "i",
+    };
   }
 
   if (andConditions.length === 1) {
@@ -241,13 +242,47 @@ async function getAllClasses(filters = {}) {
 }
 
 /**
- * Get approved/published classes only.
+ * Get approved/published classes only — search, filter, paginated.
  */
 async function getApprovedClasses(filters = {}) {
-  return getAllClasses({
+  const classes = getCollection(COLLECTIONS.CLASSES);
+  const normalizedFilters = {
     ...filters,
     status: CLASS_STATUSES.APPROVED,
+  };
+
+  console.log(normalizedFilters);
+
+  const query = buildClassQuery(normalizedFilters);
+
+  console.log(query);
+
+  const page = Math.max(Number(filters.page) || 1, 1);
+  const limit = Math.min(Math.max(Number(filters.limit) || 12, 1), 100);
+  const skip = (page - 1) * limit;
+
+  const [list, total] = await Promise.all([
+    classes.find(query).sort({ createdAt: -1 }).skip(skip).limit(limit).toArray(),
+    classes.countDocuments(query),
+  ]);
+
+  const serialized = await attachTrainerNames(list);
+  const totalPages = total === 0 ? 0 : Math.ceil(total / limit);
+
+  console.log({
+    total,
+    page,
+    totalPages,
+    returned: serialized.length,
   });
+
+  return {
+    classes: serialized,
+    total,
+    page,
+    totalPages,
+    limit,
+  };
 }
 
 /**

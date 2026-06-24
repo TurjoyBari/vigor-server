@@ -7,6 +7,7 @@ function serializePost(post) {
 
   const likeCount = post.likeCount || 0;
   const dislikeCount = post.dislikeCount || 0;
+  const commentCount = post.commentCount ?? post.commentsCount ?? 0;
 
   return {
     _id: String(post._id),
@@ -16,16 +17,18 @@ function serializePost(post) {
     image: post.image ?? null,
     authorName: post.authorName || post.trainerName,
     author: post.authorName || post.trainerName,
+    authorEmail: post.authorEmail || post.trainerEmail || "",
     authorRole: post.authorRole,
     authorId: String(post.authorId || post.trainerId),
     trainerId: String(post.trainerId || post.authorId),
     trainerName: post.trainerName || post.authorName,
-    trainerEmail: post.trainerEmail || "",
+    trainerEmail: post.trainerEmail || post.authorEmail || "",
     likes: post.likes ?? likeCount,
     dislikes: post.dislikes ?? dislikeCount,
     likeCount,
     dislikeCount,
-    commentCount: post.commentCount || 0,
+    commentCount,
+    commentsCount: commentCount,
     createdAt: post.createdAt,
     updatedAt: post.updatedAt,
   };
@@ -89,10 +92,12 @@ function assertCommentOwner(comment, user) {
 async function createPost(user, payload) {
   const { title, description, image = null } = payload;
 
-  console.log("Create forum post request:", {
-    trainerId: user.userId,
-    trainerName: user.name,
-    title,
+  console.log("Create forum post body:", payload);
+  console.log("Create forum post user:", {
+    authorId: user.userId,
+    authorName: user.name,
+    authorEmail: user.email,
+    authorRole: user.role,
   });
 
   if (!title?.trim()) throw new AppError("Title is required", 400);
@@ -100,15 +105,17 @@ async function createPost(user, payload) {
 
   const posts = getCollection(COLLECTIONS.FORUM_POSTS);
   const now = new Date();
-  const trainerObjectId = toObjectId(user.userId, "userId");
+  const authorObjectId = toObjectId(user.userId, "userId");
+  const authorEmail = user.email || "";
 
   const doc = {
-    trainerId: trainerObjectId,
-    trainerName: user.name,
-    trainerEmail: user.email || "",
-    authorId: trainerObjectId,
+    authorId: authorObjectId,
     authorName: user.name,
+    authorEmail,
     authorRole: user.role,
+    trainerId: authorObjectId,
+    trainerName: user.name,
+    trainerEmail: authorEmail,
     title: title.trim(),
     description: description.trim(),
     image: image?.trim() || null,
@@ -119,18 +126,16 @@ async function createPost(user, payload) {
     likeCount: 0,
     dislikeCount: 0,
     commentCount: 0,
+    commentsCount: 0,
     createdAt: now,
     updatedAt: now,
   };
 
   const result = await posts.insertOne(doc);
 
-  console.log("Forum post created in DB:", {
+  console.log("Forum post insert result:", {
     acknowledged: result.acknowledged,
     insertedId: String(result.insertedId),
-    trainerId: String(trainerObjectId),
-    trainerName: user.name,
-    title: doc.title,
   });
 
   const created = await posts.findOne({ _id: result.insertedId });
@@ -205,13 +210,25 @@ async function deletePost(postId, user) {
   const post = await getPostDocument(postId);
   assertPostOwnerOrAdmin(post, user);
 
+  console.log("Delete forum post:", {
+    postId: String(post._id),
+    title: post.title,
+    authorRole: post.authorRole,
+    deletedBy: user.role,
+  });
+
   const posts = getCollection(COLLECTIONS.FORUM_POSTS);
   const comments = getCollection(COLLECTIONS.COMMENTS);
 
-  await Promise.all([
+  const [postDeleteResult, commentDeleteResult] = await Promise.all([
     posts.deleteOne({ _id: post._id }),
     comments.deleteMany({ postId: post._id }),
   ]);
+
+  console.log("Forum post delete result:", {
+    post: postDeleteResult,
+    commentsRemoved: commentDeleteResult.deletedCount,
+  });
 
   return { id: String(post._id) };
 }

@@ -2,8 +2,9 @@ const forumService = require("../services/forum.service");
 const { sendSuccess, sendCreated } = require("../utils/apiResponse");
 
 async function createPost(req, res) {
+  console.log(req.body);
   const post = await forumService.createPost(req.user, req.body);
-  return sendCreated(res, { post }, "Forum post created successfully");
+  return sendCreated(res, { post, insertedId: post?.id }, "Forum post created successfully");
 }
 
 async function getAllPosts(req, res) {
