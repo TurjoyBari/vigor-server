@@ -5,6 +5,65 @@ const { isValidObjectId, toObjectId } = require("../utils/objectId");
 
 const BETTER_AUTH_USER_COLLECTION = "user";
 
+async function hasApprovedTrainerApplication(userId) {
+  if (!userId) return false;
+
+  try {
+    const applications = getCollection(COLLECTIONS.TRAINER_APPLICATIONS);
+    const userObjectId = toObjectId(String(userId), "userId");
+    const doc = await applications.findOne({
+      $or: [{ userId: userObjectId }, { userId: String(userId) }],
+      status: "approved",
+    });
+    return Boolean(doc);
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Effective dashboard role for UI / route guards (may differ from persisted DB role).
+ */
+function resolveDashboardRole({
+  existingUser,
+  sessionRole,
+  betterAuthRole,
+  hasApprovedApplication = false,
+}) {
+  const roles = [existingUser?.role, sessionRole, betterAuthRole].filter(Boolean);
+
+  if (roles.includes("admin")) return "admin";
+
+  if (
+    roles.includes("trainer") ||
+    existingUser?.trainerApplicationStatus === "approved" ||
+    hasApprovedApplication
+  ) {
+    return "trainer";
+  }
+
+  return "user";
+}
+
+/**
+ * Role to persist on token sync — only promote to trainer when an approved application exists.
+ * Avoids promoting from stale Better Auth session role before apply-trainer submit.
+ */
+function persistRoleOnSync({
+  existingUser,
+  sessionRole,
+  betterAuthRole,
+  hasApprovedApplication = false,
+}) {
+  const roles = [existingUser?.role, sessionRole, betterAuthRole].filter(Boolean);
+
+  if (roles.includes("admin")) return "admin";
+
+  if (hasApprovedApplication) return "trainer";
+
+  return existingUser?.role || sessionRole || betterAuthRole || "user";
+}
+
 /**
  * Shape user document for API responses (no sensitive fields).
  */
@@ -50,7 +109,6 @@ async function syncUserFromAuth(payload = {}) {
 
   const resolvedEmail = email || betterAuthUser?.email;
   const resolvedName = name || betterAuthUser?.name;
-  const resolvedRole = role || betterAuthUser?.role || "user";
   const resolvedImage = image ?? betterAuthUser?.image ?? null;
   const resolvedAuthUserId =
     authUserId || (betterAuthUser ? String(betterAuthUser._id) : null);
@@ -66,24 +124,48 @@ async function syncUserFromAuth(payload = {}) {
   const users = getCollection(COLLECTIONS.USERS);
   const now = new Date();
 
+  const existingUser = await users.findOne({ email: resolvedEmail.toLowerCase() });
+  const hasApprovedApplication = existingUser
+    ? await hasApprovedTrainerApplication(existingUser._id)
+    : false;
+
+  const resolvedRole = persistRoleOnSync({
+    existingUser,
+    sessionRole: role,
+    betterAuthRole: betterAuthUser?.role,
+    hasApprovedApplication,
+  });
+
+  const setFields = {
+    name: resolvedName,
+    email: resolvedEmail.toLowerCase(),
+    image: resolvedImage,
+    role: resolvedRole,
+    ...(resolvedAuthUserId ? { authUserId: resolvedAuthUserId } : {}),
+    updatedAt: now,
+  };
+
+  if (hasApprovedApplication) {
+    setFields.trainerApplicationStatus = "approved";
+  }
+
+  const setOnInsertFields = {
+    status: "active",
+    isBlocked: false,
+    trainerFeedback: null,
+    createdAt: now,
+  };
+
+  // MongoDB rejects the same path in both $set and $setOnInsert on upsert insert.
+  if (!setFields.trainerApplicationStatus) {
+    setOnInsertFields.trainerApplicationStatus = null;
+  }
+
   await users.updateOne(
     { email: resolvedEmail.toLowerCase() },
     {
-      $set: {
-        name: resolvedName,
-        email: resolvedEmail.toLowerCase(),
-        image: resolvedImage,
-        role: resolvedRole,
-        ...(resolvedAuthUserId ? { authUserId: resolvedAuthUserId } : {}),
-        updatedAt: now,
-      },
-      $setOnInsert: {
-        status: "active",
-        isBlocked: false,
-        trainerApplicationStatus: null,
-        trainerFeedback: null,
-        createdAt: now,
-      },
+      $set: setFields,
+      $setOnInsert: setOnInsertFields,
     },
     { upsert: true }
   );
@@ -102,19 +184,55 @@ async function syncUserFromAuth(payload = {}) {
 }
 
 /**
- * Issue JWT for a synced user.
+ * Issue JWT for a synced user and heal role from approved applications.
  */
-function createAuthToken(user) {
+async function createAuthToken(user) {
+  const users = getCollection(COLLECTIONS.USERS);
+  const hasApprovedApplication = await hasApprovedTrainerApplication(user._id);
+  const effectiveRole = resolveDashboardRole({
+    existingUser: user,
+    sessionRole: user.role,
+    betterAuthRole: null,
+    hasApprovedApplication,
+  });
+
+  let currentUser = user;
+
+  if (
+    effectiveRole !== user.role ||
+    (hasApprovedApplication && user.trainerApplicationStatus !== "approved")
+  ) {
+    const now = new Date();
+    await users.updateOne(
+      { _id: user._id },
+      {
+        $set: {
+          role: effectiveRole,
+          ...(hasApprovedApplication
+            ? { trainerApplicationStatus: "approved", updatedAt: now }
+            : { updatedAt: now }),
+        },
+      }
+    );
+    currentUser = await users.findOne({ _id: user._id });
+  }
+
+  const serialized = serializeUser(currentUser);
+  serialized.role = effectiveRole;
+  if (hasApprovedApplication) {
+    serialized.trainerApplicationStatus = "approved";
+  }
+
   const token = signToken({
-    userId: String(user._id),
-    email: user.email,
-    role: user.role || "user",
-    name: user.name,
+    userId: String(currentUser._id),
+    email: currentUser.email,
+    role: effectiveRole,
+    name: currentUser.name,
   });
 
   return {
     token,
-    user: serializeUser(user),
+    user: serialized,
   };
 }
 
@@ -131,13 +249,37 @@ async function loginWithSessionPayload(payload) {
  */
 async function getUserById(userId) {
   const users = getCollection(COLLECTIONS.USERS);
-  const user = await users.findOne(
+  let user = await users.findOne(
     { _id: toObjectId(userId, "userId") },
     { projection: { password: 0 } }
   );
 
   if (!user) {
     throw new AppError("User not found", 404);
+  }
+
+  const hasApprovedApplication = await hasApprovedTrainerApplication(user._id);
+  const resolvedRole = persistRoleOnSync({
+    existingUser: user,
+    sessionRole: user.role,
+    betterAuthRole: null,
+    hasApprovedApplication,
+  });
+
+  if (resolvedRole !== user.role) {
+    const now = new Date();
+    await users.updateOne(
+      { _id: user._id },
+      {
+        $set: {
+          role: resolvedRole,
+          ...(hasApprovedApplication
+            ? { trainerApplicationStatus: "approved", updatedAt: now }
+            : { updatedAt: now }),
+        },
+      }
+    );
+    user = await users.findOne({ _id: user._id }, { projection: { password: 0 } });
   }
 
   if (user.status === "blocked" || user.isBlocked === true) {
@@ -149,6 +291,8 @@ async function getUserById(userId) {
 
 module.exports = {
   serializeUser,
+  resolveDashboardRole,
+  persistRoleOnSync,
   syncUserFromAuth,
   createAuthToken,
   loginWithSessionPayload,

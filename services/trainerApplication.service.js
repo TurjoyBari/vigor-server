@@ -1,6 +1,6 @@
-const { getCollection, COLLECTIONS } = require("../config/db");
+const { getDb, getCollection, COLLECTIONS } = require("../config/db");
 const AppError = require("../utils/AppError");
-const { toObjectId } = require("../utils/objectId");
+const { toObjectId, isValidObjectId } = require("../utils/objectId");
 const { serializeUser } = require("./auth.service");
 
 const APPLICATION_STATUS = {
@@ -9,10 +9,37 @@ const APPLICATION_STATUS = {
   REJECTED: "rejected",
 };
 
+const BETTER_AUTH_USER_COLLECTION = "user";
+
+async function syncBetterAuthUserRole(vigorUser, role) {
+  if (!vigorUser) return;
+
+  const authUsers = getDb().collection(BETTER_AUTH_USER_COLLECTION);
+  const now = new Date();
+  const updates = { $set: { role, updatedAt: now } };
+
+  if (vigorUser.email) {
+    await authUsers.updateOne({ email: vigorUser.email }, updates);
+    await authUsers.updateOne(
+      { email: vigorUser.email.toLowerCase() },
+      updates
+    );
+  }
+
+  if (vigorUser.authUserId && isValidObjectId(vigorUser.authUserId)) {
+    await authUsers.updateOne(
+      { _id: toObjectId(vigorUser.authUserId) },
+      updates
+    );
+  }
+}
+
 function serializeApplication(application, user = null) {
   return {
     id: String(application._id),
     userId: String(application.userId),
+    applicantName: application.applicantName || user?.name || "Unknown",
+    applicantEmail: application.applicantEmail || user?.email || "",
     name: user?.name || application.applicantName || "Unknown",
     email: user?.email || application.applicantEmail || "",
     experience: application.experience,
@@ -92,7 +119,32 @@ async function applyTrainer(userId, payload) {
   );
 
   const created = await applications.findOne({ _id: result.insertedId });
-  return serializeApplication(created, user);
+  const application = serializeApplication(created, user);
+
+  console.log("Application Submitted:", application);
+
+  return application;
+}
+
+/**
+ * Get the latest trainer application for a user.
+ */
+async function getApplicationByUserId(userId) {
+  const applications = getCollection(COLLECTIONS.TRAINER_APPLICATIONS);
+  const users = getCollection(COLLECTIONS.USERS);
+  const userObjectId = toObjectId(userId, "userId");
+
+  const application = await applications.findOne(
+    { userId: userObjectId },
+    { sort: { createdAt: -1 } }
+  );
+
+  if (!application) {
+    return null;
+  }
+
+  const user = await users.findOne({ _id: userObjectId });
+  return serializeApplication(application, user);
 }
 
 /**
@@ -144,6 +196,10 @@ async function reviewApplication(applicationId, { status, feedback = "" }) {
     throw new AppError("Trainer application not found", 404);
   }
 
+  if (application.status !== APPLICATION_STATUS.PENDING) {
+    throw new AppError("Only pending applications can be reviewed", 400);
+  }
+
   const now = new Date();
 
   const result = await applications.findOneAndUpdate(
@@ -171,7 +227,37 @@ async function reviewApplication(applicationId, { status, feedback = "" }) {
   await users.updateOne({ _id: application.userId }, { $set: userUpdate });
 
   const user = await users.findOne({ _id: application.userId });
+
+  if (status === APPLICATION_STATUS.APPROVED) {
+    await syncBetterAuthUserRole(user, "trainer");
+    console.log("Application Approved:", applicationId);
+    console.log("User Role Updated:", String(application.userId));
+  } else {
+    console.log("Application Rejected:", applicationId);
+  }
+
   return serializeApplication(result, user);
+}
+
+/**
+ * Approve a pending trainer application and promote user to trainer.
+ */
+async function approveApplication(applicationId) {
+  return reviewApplication(applicationId, { status: APPLICATION_STATUS.APPROVED });
+}
+
+/**
+ * Reject a pending trainer application (user role unchanged).
+ */
+async function rejectApplication(applicationId, feedback = "") {
+  if (!feedback?.trim()) {
+    throw new AppError("Feedback is required when rejecting an application", 400);
+  }
+
+  return reviewApplication(applicationId, {
+    status: APPLICATION_STATUS.REJECTED,
+    feedback: feedback.trim(),
+  });
 }
 
 /**
@@ -207,14 +293,20 @@ async function demoteTrainer(trainerId) {
     throw new AppError("Trainer not found", 404);
   }
 
+  await syncBetterAuthUserRole(result, "user");
+
   return serializeUser(result);
 }
 
 module.exports = {
   APPLICATION_STATUS,
   applyTrainer,
+  getApplicationByUserId,
   getApplications,
   reviewApplication,
+  approveApplication,
+  rejectApplication,
   getTrainers,
   demoteTrainer,
+  serializeApplication,
 };

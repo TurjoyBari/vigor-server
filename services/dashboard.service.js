@@ -199,12 +199,19 @@ async function getUserOverview(userId) {
   const applications = getCollection(COLLECTIONS.TRAINER_APPLICATIONS);
 
   const userObjectId = toObjectId(userId, "userId");
+  const userIdFilter = {
+    $or: [{ userId: userObjectId }, { userId: String(userId) }],
+  };
 
   const [bookedClasses, favoriteCount, user, application] = await Promise.all([
-    bookings.countDocuments({ userId: userObjectId }),
-    favorites.countDocuments({ userId: userObjectId }),
+    bookings.countDocuments(userIdFilter),
+    favorites.countDocuments(userIdFilter),
     users.findOne({ _id: userObjectId }),
-    applications.findOne({ userId: userObjectId }, { sort: { createdAt: -1 } }),
+    applications
+      .find({ userId: userObjectId })
+      .sort({ createdAt: -1 })
+      .limit(1)
+      .next(),
   ]);
 
   let trainerApplication = null;

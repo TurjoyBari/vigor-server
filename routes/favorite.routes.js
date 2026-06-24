@@ -30,6 +30,13 @@ router.post("/", asyncHandler(favoriteController.addFavorite));
 router.get("/", asyncHandler(favoriteController.getFavorites));
 
 /**
+ * @route   GET /api/favorites/user/:userId
+ * @desc    Get favorites for a specific user from MongoDB favorites collection
+ * @access  Private (own user or admin)
+ */
+router.get("/user/:userId", asyncHandler(favoriteController.getFavoritesByUserId));
+
+/**
  * @route   DELETE /api/favorites/:id
  * @desc    Remove favorite
  * @access  Private

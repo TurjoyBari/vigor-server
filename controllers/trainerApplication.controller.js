@@ -1,4 +1,5 @@
 const trainerApplicationService = require("../services/trainerApplication.service");
+const AppError = require("../utils/AppError");
 const { sendSuccess, sendCreated } = require("../utils/apiResponse");
 
 async function applyTrainer(req, res) {
@@ -16,6 +17,47 @@ async function getApplications(req, res) {
     { applications, total: applications.length },
     "Trainer applications fetched successfully"
   );
+}
+
+/**
+ * GET /api/trainer-applications/user/:userId
+ */
+async function getApplicationByUserId(req, res) {
+  const { userId } = req.params;
+
+  if (req.user.role !== "admin" && String(req.user.userId) !== String(userId)) {
+    throw new AppError("You do not have permission to view this application", 403);
+  }
+
+  const application = await trainerApplicationService.getApplicationByUserId(userId);
+
+  return sendSuccess(
+    res,
+    { application },
+    application
+      ? "Trainer application fetched successfully"
+      : "No trainer application found for this user"
+  );
+}
+
+/**
+ * PATCH /api/trainer-applications/:id/approve
+ */
+async function approveApplication(req, res) {
+  const application = await trainerApplicationService.approveApplication(req.params.id);
+  return sendSuccess(res, { application }, "Trainer application approved successfully");
+}
+
+/**
+ * PATCH /api/trainer-applications/:id/reject
+ */
+async function rejectApplication(req, res) {
+  const feedback = req.body.feedback || req.body.adminFeedback || "";
+  const application = await trainerApplicationService.rejectApplication(
+    req.params.id,
+    feedback
+  );
+  return sendSuccess(res, { application }, "Trainer application rejected successfully");
 }
 
 async function reviewApplication(req, res) {
@@ -43,6 +85,9 @@ async function demoteTrainer(req, res) {
 module.exports = {
   applyTrainer,
   getApplications,
+  getApplicationByUserId,
+  approveApplication,
+  rejectApplication,
   reviewApplication,
   getTrainers,
   demoteTrainer,
