@@ -139,7 +139,7 @@ function assertTrainerOwnership(classDoc, userId) {
 }
 
 /**
- * Add a new class (trainer).
+ * Add a new class (trainer) — saved to MongoDB classes collection.
  */
 async function createClass(trainerId, payload) {
   const {
@@ -153,32 +153,60 @@ async function createClass(trainerId, payload) {
     description,
   } = payload;
 
+  console.log("Create class request:", {
+    trainerId,
+    className,
+    category,
+    difficulty,
+    duration,
+    schedule,
+    price,
+  });
+
   if (!className?.trim()) throw new AppError("Class name is required", 400);
   if (!category?.trim()) throw new AppError("Category is required", 400);
   if (!difficulty?.trim()) throw new AppError("Difficulty is required", 400);
   if (!duration?.trim()) throw new AppError("Duration is required", 400);
   if (!schedule?.trim()) throw new AppError("Schedule is required", 400);
-  if (price === undefined || price === null || Number.isNaN(Number(price))) {
+
+  const numericPrice = Number(price);
+  if (price === undefined || price === null || Number.isNaN(numericPrice)) {
     throw new AppError("Valid price is required", 400);
   }
+  if (numericPrice < 0) {
+    throw new AppError("Price cannot be negative", 400);
+  }
+
   if (!description?.trim()) throw new AppError("Description is required", 400);
 
   const classes = getCollection(COLLECTIONS.CLASSES);
   const users = getCollection(COLLECTIONS.USERS);
   const trainerObjectId = toObjectId(trainerId, "trainerId");
-  const trainer = await users.findOne({ _id: trainerObjectId }, { projection: { name: 1 } });
+  const trainer = await users.findOne(
+    { _id: trainerObjectId },
+    { projection: { name: 1, role: 1, email: 1 } }
+  );
+
+  if (!trainer) {
+    throw new AppError("Trainer not found", 404);
+  }
+
+  if (trainer.role !== "trainer" && trainer.role !== "admin") {
+    throw new AppError("Only trainers can create classes", 403);
+  }
+
   const now = new Date();
 
   const doc = {
     trainerId: trainerObjectId,
-    trainerName: trainer?.name || "Trainer",
+    trainerName: trainer.name || "Trainer",
     className: className.trim(),
     image: image?.trim() || DEFAULT_CLASS_IMAGE,
     category: category.trim(),
     difficulty: difficulty.trim(),
     duration: duration.trim(),
     schedule: schedule.trim(),
-    price: Number(price),
+    price: numericPrice,
     description: description.trim(),
     status: CLASS_STATUSES.PENDING,
     bookingCount: 0,
@@ -188,6 +216,15 @@ async function createClass(trainerId, payload) {
 
   const result = await classes.insertOne(doc);
   const created = await classes.findOne({ _id: result.insertedId });
+
+  console.log("Class Created from DB:", {
+    id: String(created._id),
+    trainerId: String(created.trainerId),
+    trainerName: created.trainerName,
+    className: created.className,
+    status: created.status,
+    bookingCount: created.bookingCount,
+  });
 
   return serializeClass(created, trainer);
 }
@@ -303,9 +340,11 @@ async function deleteClass(classId, userId, role) {
 }
 
 /**
- * Approve a class (admin).
+ * Approve a class (admin) — updates MongoDB status to approved.
  */
 async function approveClass(classId) {
+  console.log("Approve class request:", classId);
+
   const classes = getCollection(COLLECTIONS.CLASSES);
   const result = await classes.findOneAndUpdate(
     { _id: toObjectId(classId, "classId") },
@@ -322,13 +361,23 @@ async function approveClass(classId) {
     throw new AppError("Class not found", 404);
   }
 
+  console.log("Class approved in DB:", {
+    id: String(result._id),
+    className: result.className,
+    trainerName: result.trainerName,
+    status: result.status,
+    updatedAt: result.updatedAt,
+  });
+
   return getClassById(String(result._id));
 }
 
 /**
- * Reject a class (admin).
+ * Reject a class (admin) — updates MongoDB status to rejected.
  */
 async function rejectClass(classId) {
+  console.log("Reject class request:", classId);
+
   const classes = getCollection(COLLECTIONS.CLASSES);
   const result = await classes.findOneAndUpdate(
     { _id: toObjectId(classId, "classId") },
@@ -344,6 +393,14 @@ async function rejectClass(classId) {
   if (!result) {
     throw new AppError("Class not found", 404);
   }
+
+  console.log("Class rejected in DB:", {
+    id: String(result._id),
+    className: result.className,
+    trainerName: result.trainerName,
+    status: result.status,
+    updatedAt: result.updatedAt,
+  });
 
   return getClassById(String(result._id));
 }

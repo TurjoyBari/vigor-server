@@ -14,12 +14,15 @@ function serializePost(post) {
     title: post.title,
     description: post.description,
     image: post.image ?? null,
-    authorName: post.authorName,
-    author: post.authorName,
+    authorName: post.authorName || post.trainerName,
+    author: post.authorName || post.trainerName,
     authorRole: post.authorRole,
-    authorId: String(post.authorId),
-    likes: likeCount,
-    dislikes: dislikeCount,
+    authorId: String(post.authorId || post.trainerId),
+    trainerId: String(post.trainerId || post.authorId),
+    trainerName: post.trainerName || post.authorName,
+    trainerEmail: post.trainerEmail || "",
+    likes: post.likes ?? likeCount,
+    dislikes: post.dislikes ?? dislikeCount,
     likeCount,
     dislikeCount,
     commentCount: post.commentCount || 0,
@@ -65,7 +68,8 @@ async function getCommentDocument(commentId) {
 }
 
 function assertPostOwnerOrAdmin(post, user) {
-  const isOwner = String(post.authorId) === String(user.userId);
+  const ownerId = String(post.trainerId || post.authorId);
+  const isOwner = ownerId === String(user.userId);
   const isAdmin = user.role === "admin";
 
   if (!isOwner && !isAdmin) {
@@ -80,19 +84,29 @@ function assertCommentOwner(comment, user) {
 }
 
 /**
- * Create a forum post.
+ * Create a forum post — saved to MongoDB forumPosts collection.
  */
 async function createPost(user, payload) {
   const { title, description, image = null } = payload;
+
+  console.log("Create forum post request:", {
+    trainerId: user.userId,
+    trainerName: user.name,
+    title,
+  });
 
   if (!title?.trim()) throw new AppError("Title is required", 400);
   if (!description?.trim()) throw new AppError("Description is required", 400);
 
   const posts = getCollection(COLLECTIONS.FORUM_POSTS);
   const now = new Date();
+  const trainerObjectId = toObjectId(user.userId, "userId");
 
   const doc = {
-    authorId: toObjectId(user.userId),
+    trainerId: trainerObjectId,
+    trainerName: user.name,
+    trainerEmail: user.email || "",
+    authorId: trainerObjectId,
     authorName: user.name,
     authorRole: user.role,
     title: title.trim(),
@@ -100,6 +114,8 @@ async function createPost(user, payload) {
     image: image?.trim() || null,
     likedBy: [],
     dislikedBy: [],
+    likes: 0,
+    dislikes: 0,
     likeCount: 0,
     dislikeCount: 0,
     commentCount: 0,
@@ -108,6 +124,15 @@ async function createPost(user, payload) {
   };
 
   const result = await posts.insertOne(doc);
+
+  console.log("Forum post created in DB:", {
+    acknowledged: result.acknowledged,
+    insertedId: String(result.insertedId),
+    trainerId: String(trainerObjectId),
+    trainerName: user.name,
+    title: doc.title,
+  });
+
   const created = await posts.findOne({ _id: result.insertedId });
 
   return serializePost(created);
@@ -121,7 +146,8 @@ async function getAllPosts(filters = {}) {
   const query = {};
 
   if (filters.authorId) {
-    query.authorId = toObjectId(filters.authorId, "authorId");
+    const authorObjectId = toObjectId(filters.authorId, "authorId");
+    query.$or = [{ authorId: authorObjectId }, { trainerId: authorObjectId }];
   }
 
   if (filters.search) {
@@ -214,6 +240,8 @@ async function likePost(postId, userId) {
       $set: {
         likedBy: updatedLikedBy,
         dislikedBy: updatedDislikedBy,
+        likes: updatedLikedBy.length,
+        dislikes: updatedDislikedBy.length,
         likeCount: updatedLikedBy.length,
         dislikeCount: updatedDislikedBy.length,
         updatedAt: new Date(),
@@ -249,6 +277,8 @@ async function dislikePost(postId, userId) {
       $set: {
         likedBy: updatedLikedBy,
         dislikedBy: updatedDislikedBy,
+        likes: updatedLikedBy.length,
+        dislikes: updatedDislikedBy.length,
         likeCount: updatedLikedBy.length,
         dislikeCount: updatedDislikedBy.length,
         updatedAt: new Date(),

@@ -15,6 +15,11 @@ router.get("/profile", asyncHandler(trainerController.getProfile));
 router.patch("/profile", asyncHandler(trainerController.updateProfile));
 
 router.get("/classes", asyncHandler(classController.getTrainerClasses));
+/**
+ * @route   POST /api/trainer/classes
+ * @desc    Create class in MongoDB classes collection (status: pending)
+ * @access  Private (trainer, admin)
+ */
 router.post("/classes", asyncHandler(classController.createClass));
 router.patch("/classes/:id", asyncHandler(classController.updateClass));
 router.delete("/classes/:id", asyncHandler(classController.deleteClass));
