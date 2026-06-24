@@ -6,6 +6,7 @@ const trainerApplicationController = require("../controllers/trainerApplication.
 const asyncHandler = require("../utils/asyncHandler");
 const { verifyToken } = require("../middleware/verifyToken");
 const { requireRole } = require("../middleware/requireRole");
+const { checkUserBlocked } = require("../middleware/checkUserBlocked");
 
 const router = express.Router();
 
@@ -17,8 +18,13 @@ router.patch("/profile", asyncHandler(userDashboardController.updateProfile));
 
 router.get("/booked-classes", asyncHandler(bookingController.getBookedClasses));
 router.get("/favorites", asyncHandler(favoriteController.getFavorites));
-router.post("/favorites", asyncHandler(favoriteController.addFavorite));
-router.delete("/favorites/:id", asyncHandler(favoriteController.removeFavorite));
-router.post("/apply-trainer", requireRole("user"), asyncHandler(trainerApplicationController.applyTrainer));
+router.post("/favorites", checkUserBlocked, asyncHandler(favoriteController.addFavorite));
+router.delete("/favorites/:id", checkUserBlocked, asyncHandler(favoriteController.removeFavorite));
+router.post(
+  "/apply-trainer",
+  requireRole("user"),
+  checkUserBlocked,
+  asyncHandler(trainerApplicationController.applyTrainer)
+);
 
 module.exports = router;

@@ -3,6 +3,7 @@ const forumController = require("../controllers/forum.controller");
 const asyncHandler = require("../utils/asyncHandler");
 const { verifyToken, optionalAuth } = require("../middleware/verifyToken");
 const { requireRole } = require("../middleware/requireRole");
+const { checkUserBlocked } = require("../middleware/checkUserBlocked");
 
 const router = express.Router();
 
@@ -53,6 +54,7 @@ router.post(
   "/posts/:id/like",
   verifyToken,
   requireRole("user", "trainer", "admin"),
+  checkUserBlocked,
   asyncHandler(forumController.likePost)
 );
 
@@ -65,6 +67,7 @@ router.post(
   "/posts/:id/dislike",
   verifyToken,
   requireRole("user", "trainer", "admin"),
+  checkUserBlocked,
   asyncHandler(forumController.dislikePost)
 );
 
@@ -77,6 +80,7 @@ router.post(
   "/posts/:id/comments",
   verifyToken,
   requireRole("user", "trainer", "admin"),
+  checkUserBlocked,
   asyncHandler(forumController.addComment)
 );
 
@@ -89,6 +93,7 @@ router.post(
   "/comments/:id/reply",
   verifyToken,
   requireRole("user", "trainer", "admin"),
+  checkUserBlocked,
   asyncHandler(forumController.replyComment)
 );
 
@@ -101,6 +106,7 @@ router.patch(
   "/comments/:id",
   verifyToken,
   requireRole("user", "trainer", "admin"),
+  checkUserBlocked,
   asyncHandler(forumController.editComment)
 );
 
@@ -113,6 +119,7 @@ router.delete(
   "/comments/:id",
   verifyToken,
   requireRole("user", "trainer", "admin"),
+  checkUserBlocked,
   asyncHandler(forumController.deleteComment)
 );
 

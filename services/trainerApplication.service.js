@@ -270,6 +270,10 @@ async function getTrainers() {
     .sort({ createdAt: -1 })
     .toArray();
 
+  list.forEach((trainer) => {
+    console.log("Trainer role:", trainer.role);
+  });
+
   return list.map(serializeUser);
 }
 
@@ -278,8 +282,21 @@ async function getTrainers() {
  */
 async function demoteTrainer(trainerId) {
   const users = getCollection(COLLECTIONS.USERS);
+  const objectId = toObjectId(trainerId, "trainerId");
+
+  const target = await users.findOne(
+    { _id: objectId, role: "trainer" },
+    { projection: { role: 1, email: 1, name: 1 } }
+  );
+
+  if (!target) {
+    throw new AppError("Trainer not found", 404);
+  }
+
+  console.log("Trainer role:", target.role);
+
   const result = await users.findOneAndUpdate(
-    { _id: toObjectId(trainerId, "trainerId"), role: "trainer" },
+    { _id: objectId, role: "trainer" },
     {
       $set: {
         role: "user",
@@ -295,7 +312,10 @@ async function demoteTrainer(trainerId) {
 
   await syncBetterAuthUserRole(result, "user");
 
-  return serializeUser(result);
+  const demoted = serializeUser(result);
+  console.log("Demotion result:", demoted);
+
+  return demoted;
 }
 
 module.exports = {

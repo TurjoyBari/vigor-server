@@ -3,6 +3,7 @@ const trainerApplicationController = require("../controllers/trainerApplication.
 const asyncHandler = require("../utils/asyncHandler");
 const { verifyToken } = require("../middleware/verifyToken");
 const { requireRole } = require("../middleware/requireRole");
+const { checkUserBlocked } = require("../middleware/checkUserBlocked");
 
 const router = express.Router();
 
@@ -13,7 +14,7 @@ router.use(verifyToken);
  * @desc    Submit trainer application (saved to MongoDB trainerApplications)
  * @access  Private (user)
  */
-router.post("/", asyncHandler(trainerApplicationController.applyTrainer));
+router.post("/", checkUserBlocked, asyncHandler(trainerApplicationController.applyTrainer));
 
 /**
  * @route   GET /api/trainer-applications/user/:userId

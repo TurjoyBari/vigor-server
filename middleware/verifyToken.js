@@ -36,9 +36,7 @@ const verifyToken = asyncHandler(async (req, res, next) => {
     throw new AppError("User not found", 401);
   }
 
-  if (user.status === "blocked" || user.isBlocked === true) {
-    throw new AppError("Your account has been blocked", 403);
-  }
+  const isBlocked = user.status === "blocked" || user.isBlocked === true;
 
   req.user = {
     id: String(user._id),
@@ -48,6 +46,7 @@ const verifyToken = asyncHandler(async (req, res, next) => {
     image: user.image || null,
     role: user.role || "user",
     status: user.status || "active",
+    isBlocked,
   };
 
   req.token = token;
@@ -72,7 +71,9 @@ const optionalAuth = asyncHandler(async (req, res, next) => {
       _id: toObjectId(decoded.userId, "userId"),
     });
 
-    if (user && user.status !== "blocked" && user.isBlocked !== true) {
+    if (user) {
+      const isBlocked = user.status === "blocked" || user.isBlocked === true;
+
       req.user = {
         id: String(user._id),
         userId: String(user._id),
@@ -81,6 +82,7 @@ const optionalAuth = asyncHandler(async (req, res, next) => {
         image: user.image || null,
         role: user.role || "user",
         status: user.status || "active",
+        isBlocked,
       };
       req.token = token;
     }

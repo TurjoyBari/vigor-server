@@ -3,6 +3,7 @@ const paymentController = require("../controllers/payment.controller");
 const asyncHandler = require("../utils/asyncHandler");
 const { verifyToken } = require("../middleware/verifyToken");
 const { requireRole } = require("../middleware/requireRole");
+const { checkUserBlocked } = require("../middleware/checkUserBlocked");
 
 const router = express.Router();
 
@@ -15,6 +16,7 @@ router.use(verifyToken, requireRole("user", "trainer", "admin"));
  */
 router.post(
   "/create-checkout-session",
+  checkUserBlocked,
   asyncHandler(paymentController.createCheckoutSession)
 );
 

@@ -3,6 +3,7 @@ const bookingController = require("../controllers/booking.controller");
 const asyncHandler = require("../utils/asyncHandler");
 const { verifyToken } = require("../middleware/verifyToken");
 const { requireRole } = require("../middleware/requireRole");
+const { checkUserBlocked } = require("../middleware/checkUserBlocked");
 
 const router = express.Router();
 
@@ -20,7 +21,7 @@ router.get("/check", asyncHandler(bookingController.checkBooking));
  * @desc    Book a class
  * @access  Private
  */
-router.post("/", asyncHandler(bookingController.bookClass));
+router.post("/", checkUserBlocked, asyncHandler(bookingController.bookClass));
 
 /**
  * @route   GET /api/bookings/my

@@ -118,8 +118,25 @@ async function blockUser(userId, actorId) {
   }
 
   const users = getCollection(COLLECTIONS.USERS);
+  const objectId = toObjectId(userId, "userId");
+
+  const target = await users.findOne(
+    { _id: objectId },
+    { projection: { role: 1, status: 1 } }
+  );
+
+  if (!target) {
+    throw new AppError("User not found", 404);
+  }
+
+  console.log("User status:", target.status);
+
+  if (target.role === "admin") {
+    throw new AppError("Admin accounts cannot be blocked", 400);
+  }
+
   const result = await users.findOneAndUpdate(
-    { _id: toObjectId(userId, "userId") },
+    { _id: objectId },
     {
       $set: {
         status: "blocked",
@@ -134,6 +151,8 @@ async function blockUser(userId, actorId) {
     throw new AppError("User not found", 404);
   }
 
+  console.log("User blocked, new status:", result.status);
+
   return serializeUser(result);
 }
 
@@ -142,8 +161,21 @@ async function blockUser(userId, actorId) {
  */
 async function unblockUser(userId) {
   const users = getCollection(COLLECTIONS.USERS);
+  const objectId = toObjectId(userId, "userId");
+
+  const target = await users.findOne(
+    { _id: objectId },
+    { projection: { status: 1 } }
+  );
+
+  if (!target) {
+    throw new AppError("User not found", 404);
+  }
+
+  console.log("User status:", target.status);
+
   const result = await users.findOneAndUpdate(
-    { _id: toObjectId(userId, "userId") },
+    { _id: objectId },
     {
       $set: {
         status: "active",
@@ -157,6 +189,8 @@ async function unblockUser(userId) {
   if (!result) {
     throw new AppError("User not found", 404);
   }
+
+  console.log("User unblocked, new status:", result.status);
 
   return serializeUser(result);
 }

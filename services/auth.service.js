@@ -34,6 +34,10 @@ function resolveDashboardRole({
 
   if (roles.includes("admin")) return "admin";
 
+  // MongoDB users.role is source of truth (demoted trainers stay user).
+  if (existingUser?.role === "trainer") return "trainer";
+  if (existingUser?.role === "user") return "user";
+
   if (
     roles.includes("trainer") ||
     existingUser?.trainerApplicationStatus === "approved" ||
@@ -59,6 +63,10 @@ function persistRoleOnSync({
 
   if (roles.includes("admin")) return "admin";
 
+  // MongoDB users.role is source of truth — do not re-promote demoted trainers.
+  if (existingUser?.role === "trainer") return "trainer";
+  if (existingUser?.role === "user") return "user";
+
   if (hasApprovedApplication) return "trainer";
 
   return existingUser?.role || sessionRole || betterAuthRole || "user";
@@ -70,6 +78,8 @@ function persistRoleOnSync({
 function serializeUser(user) {
   if (!user) return null;
 
+  const isBlocked = user.status === "blocked" || user.isBlocked === true;
+
   return {
     id: String(user._id),
     name: user.name,
@@ -77,6 +87,7 @@ function serializeUser(user) {
     image: user.image || null,
     role: user.role || "user",
     status: user.status || "active",
+    isBlocked,
     trainerApplicationStatus: user.trainerApplicationStatus ?? null,
     trainerFeedback: user.trainerFeedback ?? null,
     createdAt: user.createdAt,
@@ -176,9 +187,7 @@ async function syncUserFromAuth(payload = {}) {
     throw new AppError("Failed to sync user account", 500);
   }
 
-  if (user.status === "blocked" || user.isBlocked === true) {
-    throw new AppError("Your account has been blocked", 403);
-  }
+  console.log("User status:", user.status);
 
   return user;
 }
@@ -282,9 +291,7 @@ async function getUserById(userId) {
     user = await users.findOne({ _id: user._id }, { projection: { password: 0 } });
   }
 
-  if (user.status === "blocked" || user.isBlocked === true) {
-    throw new AppError("Your account has been blocked", 403);
-  }
+  console.log("User status:", user.status);
 
   return serializeUser(user);
 }

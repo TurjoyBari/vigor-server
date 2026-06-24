@@ -3,6 +3,7 @@ const favoriteController = require("../controllers/favorite.controller");
 const asyncHandler = require("../utils/asyncHandler");
 const { verifyToken } = require("../middleware/verifyToken");
 const { requireRole } = require("../middleware/requireRole");
+const { checkUserBlocked } = require("../middleware/checkUserBlocked");
 
 const router = express.Router();
 
@@ -20,7 +21,7 @@ router.get("/check", asyncHandler(favoriteController.checkFavorite));
  * @desc    Add class to favorites
  * @access  Private
  */
-router.post("/", asyncHandler(favoriteController.addFavorite));
+router.post("/", checkUserBlocked, asyncHandler(favoriteController.addFavorite));
 
 /**
  * @route   GET /api/favorites
@@ -41,6 +42,6 @@ router.get("/user/:userId", asyncHandler(favoriteController.getFavoritesByUserId
  * @desc    Remove favorite
  * @access  Private
  */
-router.delete("/:id", asyncHandler(favoriteController.removeFavorite));
+router.delete("/:id", checkUserBlocked, asyncHandler(favoriteController.removeFavorite));
 
 module.exports = router;
