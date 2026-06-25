@@ -8,20 +8,16 @@ async function createPost(req, res) {
 }
 
 async function getAllPosts(req, res) {
-  const posts = await forumService.getAllPosts(req.query);
-  return sendSuccess(res, { posts, total: posts.length }, "Forum posts fetched successfully");
+  const result = await forumService.getAllPosts(req.query);
+  return sendSuccess(res, result, "Forum posts fetched successfully");
 }
 
 async function getTrainerPosts(req, res) {
-  const posts = await forumService.getAllPosts({
+  const result = await forumService.getAllPosts({
     ...req.query,
     authorId: req.user.userId,
   });
-  return sendSuccess(
-    res,
-    { posts, total: posts.length },
-    "Trainer forum posts fetched successfully"
-  );
+  return sendSuccess(res, result, "Trainer forum posts fetched successfully");
 }
 
 async function getPostById(req, res) {

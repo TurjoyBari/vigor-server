@@ -11,15 +11,41 @@ const paymentController = require("./controllers/payment.controller");
 const app = express();
 
 const PORT = process.env.PORT || 5000;
-const CLIENT_URL = process.env.CLIENT_URL || "http://localhost:3000";
 const NODE_ENV = process.env.NODE_ENV || "development";
+const IS_VERCEL = Boolean(process.env.VERCEL);
+
+function getAllowedOrigins() {
+  const raw = process.env.CLIENT_URL || "http://localhost:3000";
+  return raw
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+}
+
+function isOriginAllowed(origin) {
+  if (!origin) return true;
+
+  const allowed = getAllowedOrigins();
+  if (allowed.includes(origin)) return true;
+
+  // Vercel preview + production frontends (*.vercel.app)
+  if (/^https:\/\/[\w.-]+\.vercel\.app$/.test(origin)) return true;
+
+  return false;
+}
 
 // ---------------------------------------------------------------------------
 // Global middleware
 // ---------------------------------------------------------------------------
 app.use(
   cors({
-    origin: CLIENT_URL,
+    origin(origin, callback) {
+      if (isOriginAllowed(origin)) {
+        callback(null, true);
+      } else {
+        callback(null, false);
+      }
+    },
     credentials: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
@@ -49,15 +75,33 @@ app.get("/", (req, res) => {
   });
 });
 
-app.get("/api/health", (req, res) => {
-  res.json({
-    success: true,
-    status: "ok",
-    database: isDbConnected() ? "connected" : "disconnected",
-    environment: NODE_ENV,
-    timestamp: new Date().toISOString(),
-  });
-});
+app.get(
+  "/api/health",
+  asyncHandler(async (req, res) => {
+    try {
+      await connectDB();
+    } catch {
+      // Health still returns so deploy checks can surface DB status.
+    }
+
+    res.json({
+      success: true,
+      status: "ok",
+      database: isDbConnected() ? "connected" : "disconnected",
+      environment: NODE_ENV,
+      timestamp: new Date().toISOString(),
+    });
+  })
+);
+
+// Ensure MongoDB is connected before API handlers (required on Vercel serverless).
+app.use(
+  "/api",
+  asyncHandler(async (req, res, next) => {
+    await connectDB();
+    next();
+  })
+);
 
 // ---------------------------------------------------------------------------
 // API routes
@@ -135,6 +179,10 @@ process.on("uncaughtException", (error) => {
   process.exit(1);
 });
 
-startServer();
-
-module.exports = app;
+// Vercel serverless: export app only — do not call app.listen().
+if (IS_VERCEL) {
+  module.exports = app;
+} else {
+  startServer();
+  module.exports = app;
+}

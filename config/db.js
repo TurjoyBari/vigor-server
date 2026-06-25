@@ -22,6 +22,7 @@ const COLLECTIONS = {
 
 let client = null;
 let db = null;
+let indexesEnsured = false;
 
 const mongoOptions = {
   serverApi: {
@@ -29,6 +30,9 @@ const mongoOptions = {
     strict: true,
     deprecationErrors: true,
   },
+  serverSelectionTimeoutMS: 10000,
+  connectTimeoutMS: 10000,
+  socketTimeoutMS: 20000,
 };
 
 /**
@@ -40,12 +44,17 @@ async function connectDB() {
   }
 
   client = new MongoClient(MONGODB_URI, mongoOptions);
-  await client.connect();
+
+  const connectPromise = client.connect();
+  const timeoutPromise = new Promise((_, reject) => {
+    setTimeout(() => reject(new Error("MongoDB connection timed out")), 12000);
+  });
+
+  await Promise.race([connectPromise, timeoutPromise]);
 
   db = client.db(DB_NAME);
 
   await db.command({ ping: 1 });
-  // console.log(`MongoDB connected — database: "${DB_NAME}"`);
 
   await ensureIndexes(db);
 
@@ -56,7 +65,13 @@ async function connectDB() {
  * Create indexes for performance and duplicate prevention.
  */
 async function ensureIndexes(database) {
+  if (indexesEnsured) {
+    return;
+  }
+
   await database.collection(COLLECTIONS.USERS).createIndex({ email: 1 }, { unique: true });
+  await database.collection(COLLECTIONS.USERS).createIndex({ createdAt: -1 });
+  await database.collection(COLLECTIONS.USERS).createIndex({ authUserId: 1 });
   await database.collection(COLLECTIONS.BOOKINGS).createIndex(
     { userId: 1, classId: 1 },
     { unique: true }
@@ -70,6 +85,7 @@ async function ensureIndexes(database) {
   await database.collection(COLLECTIONS.TRAINER_APPLICATIONS).createIndex({ userId: 1 });
   await database.collection(COLLECTIONS.FORUM_POSTS).createIndex({ createdAt: -1 });
   await database.collection(COLLECTIONS.COMMENTS).createIndex({ postId: 1 });
+  indexesEnsured = true;
 }
 
 /**

@@ -144,7 +144,7 @@ async function createPost(user, payload) {
 }
 
 /**
- * Get all forum posts with optional search.
+ * Get forum posts with optional search and pagination.
  */
 async function getAllPosts(filters = {}) {
   const posts = getCollection(COLLECTIONS.FORUM_POSTS);
@@ -157,11 +157,50 @@ async function getAllPosts(filters = {}) {
 
   if (filters.search) {
     const regex = new RegExp(filters.search.trim(), "i");
-    query.$or = [{ title: regex }, { description: regex }];
+    const searchQuery = { $or: [{ title: regex }, { description: regex }] };
+    if (query.$or) {
+      query.$and = [{ $or: query.$or }, searchQuery];
+      delete query.$or;
+    } else {
+      Object.assign(query, searchQuery);
+    }
   }
 
-  const list = await posts.find(query).sort({ createdAt: -1 }).toArray();
-  return list.map(serializePost);
+  const usePagination =
+    filters.page !== undefined || filters.limit !== undefined;
+
+  if (!usePagination) {
+    const list = await posts.find(query).sort({ createdAt: -1 }).toArray();
+    const serialized = list.map(serializePost);
+
+    return {
+      posts: serialized,
+      total: serialized.length,
+      page: 1,
+      totalPages: serialized.length ? 1 : 0,
+      limit: serialized.length,
+    };
+  }
+
+  const page = Math.max(Number(filters.page) || 1, 1);
+  const limit = Math.min(Math.max(Number(filters.limit) || 9, 1), 100);
+  const skip = (page - 1) * limit;
+
+  const [list, total] = await Promise.all([
+    posts.find(query).sort({ createdAt: -1 }).skip(skip).limit(limit).toArray(),
+    posts.countDocuments(query),
+  ]);
+
+  const serialized = list.map(serializePost);
+  const totalPages = total === 0 ? 0 : Math.ceil(total / limit);
+
+  return {
+    posts: serialized,
+    total,
+    page,
+    totalPages,
+    limit,
+  };
 }
 
 /**
