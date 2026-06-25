@@ -109,7 +109,7 @@ async function addFavorite(userId, classId) {
   const result = await favorites.insertOne(favoriteDoc);
   const favorite = await favorites.findOne({ _id: result.insertedId });
 
-  console.log("Favorite saved:", favorite);
+  // console.log("Favorite saved:", favorite);
 
   return serializeFavorite(favorite);
 }
@@ -126,7 +126,7 @@ async function getFavoritesByUserId(userId) {
     .sort({ addedAt: -1, createdAt: -1 })
     .toArray();
 
-  console.log("Favorites from DB for user:", userId, list);
+  // console.log("Favorites from DB for user:", userId, list);
 
   if (!list.length) return [];
 
@@ -165,7 +165,7 @@ async function removeFavorite(userId, favoriteId) {
 
   await favorites.deleteOne({ _id: favorite._id });
 
-  console.log("Favorite removed:", String(favorite._id));
+  // console.log("Favorite removed:", String(favorite._id));
 
   return { id: String(favorite._id), classId: String(favorite.classId) };
 }

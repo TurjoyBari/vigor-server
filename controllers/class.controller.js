@@ -16,7 +16,7 @@ async function getAllClasses(req, res) {
 }
 
 async function getApprovedClasses(req, res) {
-  console.log(req.query);
+  // console.log(req.query);
 
   const result = await classService.getApprovedClasses(req.query);
 
@@ -58,13 +58,13 @@ async function deleteClass(req, res) {
 }
 
 async function approveClass(req, res) {
-  console.log("PATCH approve class:", req.params.id);
+  // console.log("PATCH approve class:", req.params.id);
   const classItem = await classService.approveClass(req.params.id);
   return sendSuccess(res, { class: classItem }, "Class approved successfully");
 }
 
 async function rejectClass(req, res) {
-  console.log("PATCH reject class:", req.params.id);
+  // console.log("PATCH reject class:", req.params.id);
   const classItem = await classService.rejectClass(req.params.id);
   return sendSuccess(res, { class: classItem }, "Class rejected successfully");
 }

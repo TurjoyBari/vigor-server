@@ -27,11 +27,11 @@ async function run() {
   }
 
   const userId = String(user._id);
-  console.log("\n=== User Dashboard DB Test ===\n");
-  console.log("User:", user.name, `<${user.email}>`);
-  console.log("User ID:", userId);
-  console.log("Role:", user.role);
-  console.log("Trainer application status:", user.trainerApplicationStatus ?? "none");
+  // console.log("\n=== User Dashboard DB Test ===\n");
+  // console.log("User:", user.name, `<${user.email}>`);
+  // console.log("User ID:", userId);
+  // console.log("Role:", user.role);
+  // console.log("Trainer application status:", user.trainerApplicationStatus ?? "none");
 
   const overview = await dashboardService.getUserOverview(userId);
 
@@ -50,19 +50,19 @@ async function run() {
     .sort({ createdAt: -1 })
     .toArray();
 
-  console.log("\n--- MongoDB counts ---");
-  console.log("Bookings:", rawBookings);
-  console.log("Favorites:", rawFavorites);
-  console.log("Applications:", rawApplications.length);
+  // console.log("\n--- MongoDB counts ---");
+  // console.log("Bookings:", rawBookings);
+  // console.log("Favorites:", rawFavorites);
+  // console.log("Applications:", rawApplications.length);
 
-  console.log("\n--- getUserOverview() ---");
-  console.log("Stats:", overview.stats);
-  console.log("Trainer application:", overview.trainerApplication);
+    // console.log("\n--- getUserOverview() ---");
+    // console.log("Stats:", overview.stats);
+    // console.log("Trainer application:", overview.trainerApplication);
 
   const { token, user: syncedUser } = await authService.createAuthToken(user);
-  console.log("\n--- Auth token ---");
-  console.log("JWT issued for role:", syncedUser.role);
-  console.log("Token length:", token.length);
+  // console.log("\n--- Auth token ---");
+  // console.log("JWT issued for role:", syncedUser.role);
+  // console.log("Token length:", token.length);
 
   const BASE = process.env.API_TEST_URL || "http://localhost:5000/api";
   const res = await fetch(`${BASE}/user/overview`, {
@@ -70,15 +70,15 @@ async function run() {
   });
   const body = await res.json();
 
-  console.log("\n--- GET /api/user/overview ---");
-  console.log("Status:", res.status);
-  console.log("Response:", JSON.stringify(body, null, 2));
+  // console.log("\n--- GET /api/user/overview ---");
+  // console.log("Status:", res.status);
+  // console.log("Response:", JSON.stringify(body, null, 2));
 
   if (!res.ok) {
     process.exit(1);
   }
 
-  console.log("\nPASS: User dashboard data loads from database.\n");
+  // console.log("\nPASS: User dashboard data loads from database.\n");
 }
 
 run()

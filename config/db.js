@@ -45,7 +45,7 @@ async function connectDB() {
   db = client.db(DB_NAME);
 
   await db.command({ ping: 1 });
-  console.log(`MongoDB connected — database: "${DB_NAME}"`);
+  // console.log(`MongoDB connected — database: "${DB_NAME}"`);
 
   await ensureIndexes(db);
 
@@ -104,7 +104,7 @@ async function closeDB() {
     await client.close();
     client = null;
     db = null;
-    console.log("MongoDB connection closed.");
+    // console.log("MongoDB connection closed.");
   }
 }
 

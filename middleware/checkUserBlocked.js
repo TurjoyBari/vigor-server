@@ -31,7 +31,7 @@ const checkUserBlocked = asyncHandler(async (req, res, next) => {
     throw new AppError("User not found", 401);
   }
 
-  console.log("User status:", user.status);
+  // console.log("User status:", user.status);
 
   if (user.status === "blocked" || user.isBlocked === true) {
     throw new AppError("Action restricted by Admin", 403);

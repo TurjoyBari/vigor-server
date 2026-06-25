@@ -129,7 +129,7 @@ async function blockUser(userId, actorId) {
     throw new AppError("User not found", 404);
   }
 
-  console.log("User status:", target.status);
+  // console.log("User status:", target.status);
 
   if (target.role === "admin") {
     throw new AppError("Admin accounts cannot be blocked", 400);
@@ -151,7 +151,7 @@ async function blockUser(userId, actorId) {
     throw new AppError("User not found", 404);
   }
 
-  console.log("User blocked, new status:", result.status);
+  // console.log("User blocked, new status:", result.status);
 
   return serializeUser(result);
 }
@@ -172,7 +172,7 @@ async function unblockUser(userId) {
     throw new AppError("User not found", 404);
   }
 
-  console.log("User status:", target.status);
+  // console.log("User status:", target.status);
 
   const result = await users.findOneAndUpdate(
     { _id: objectId },
@@ -190,7 +190,7 @@ async function unblockUser(userId) {
     throw new AppError("User not found", 404);
   }
 
-  console.log("User unblocked, new status:", result.status);
+  // console.log("User unblocked, new status:", result.status);
 
   return serializeUser(result);
 }

@@ -22,7 +22,7 @@ async function run() {
     { _id: user._id },
     { $set: { role: "user", updatedAt: new Date() } }
   );
-  console.log("Simulated stale DB role: user");
+  // console.log("Simulated stale DB role: user");
 
   const { user: syncedUser, token } = await authService.loginWithSessionPayload({
     userId: user.authUserId || String(user._id),
@@ -31,8 +31,8 @@ async function run() {
     role: "user",
   });
 
-  console.log("After token sync role:", syncedUser.role);
-  console.log("Trainer application status:", syncedUser.trainerApplicationStatus);
+  // console.log("After token sync role:", syncedUser.role);
+  // console.log("Trainer application status:", syncedUser.trainerApplicationStatus);
 
   const BASE = process.env.API_TEST_URL || "http://localhost:5000/api";
   const res = await fetch(`${BASE}/trainer/overview`, {
@@ -40,14 +40,14 @@ async function run() {
   });
   const body = await res.json();
 
-  console.log("GET /trainer/overview status:", res.status);
-  console.log("Message:", body.message);
+  // console.log("GET /trainer/overview status:", res.status);
+  // console.log("Message:", body.message);
 
   if (!res.ok || syncedUser.role !== "trainer") {
     process.exit(1);
   }
 
-  console.log("\nPASS: Approved user can access trainer dashboard API.\n");
+  // console.log("\nPASS: Approved user can access trainer dashboard API.\n");
 }
 
 run()

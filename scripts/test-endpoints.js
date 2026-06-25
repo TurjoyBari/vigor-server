@@ -68,7 +68,7 @@ async function request(method, path, { role, body, expectStatus } = {}) {
   if (!ok) {
     console.error(`  FAIL ${method} ${path} → ${res.status}`, data?.message || "");
   } else {
-    console.log(`  PASS ${method} ${path} → ${res.status}`);
+    // console.log(`  PASS ${method} ${path} → ${res.status}`);
   }
 
   return { res, data, ok };
@@ -91,21 +91,21 @@ async function issueToken(key, email, name, role = key) {
 }
 
 async function runTests() {
-  console.log("\n=== VIGOR API Test Suite ===\n");
-  console.log(`Base URL: ${BASE}\n`);
+  // console.log("\n=== VIGOR API Test Suite ===\n");
+  // console.log(`Base URL: ${BASE}\n`);
 
   // 1. Health
-  console.log("--- Health ---");
+  // console.log("--- Health ---");
   await fetch("http://localhost:5000/api/health").then(async (res) => {
     const data = await res.json();
     const ok = res.ok && data.success;
     results.push({ method: "GET", path: "/api/health", status: res.status, ok });
     ok ? (passed += 1) : (failed += 1);
-    console.log(ok ? "  PASS GET /api/health" : "  FAIL GET /api/health");
+    // console.log(ok ? "  PASS GET /api/health" : "  FAIL GET /api/health");
   });
 
   // 2. Auth tokens
-  console.log("\n--- Auth ---");
+  // console.log("\n--- Auth ---");
   await issueToken("admin", "vigor-admin@test.com", "Vigor Admin");
   await issueToken("trainer", "vigor-trainer@test.com", "Vigor Trainer");
   await issueToken("user", "vigor-user@test.com", "Vigor User");
@@ -118,7 +118,7 @@ async function runTests() {
   await request("GET", "/auth/me", { role: "user", expectStatus: 200 });
 
   // 3. Users (admin)
-  console.log("\n--- Users ---");
+  // console.log("\n--- Users ---");
   await request("GET", "/users", { role: "admin", expectStatus: 200 });
   await request("POST", "/users", {
     role: "admin",
@@ -131,7 +131,7 @@ async function runTests() {
   });
 
   // 4. Classes
-  console.log("\n--- Classes ---");
+  // console.log("\n--- Classes ---");
   const createClass = await request("POST", "/trainer/classes", {
     role: "trainer",
     body: {
@@ -163,7 +163,7 @@ async function runTests() {
   }
 
   // 5. Bookings
-  console.log("\n--- Bookings ---");
+  // console.log("\n--- Bookings ---");
   if (state.classId) {
     await request("POST", "/bookings", {
       role: "user",
@@ -180,7 +180,7 @@ async function runTests() {
   }
 
   // 6. Favorites
-  console.log("\n--- Favorites ---");
+  // console.log("\n--- Favorites ---");
   if (state.classId) {
     const fav = await request("POST", "/user/favorites", {
       role: "user",
@@ -203,7 +203,7 @@ async function runTests() {
   }
 
   // 7. Trainer application
-  console.log("\n--- Trainer Applications ---");
+  // console.log("\n--- Trainer Applications ---");
   const app = await request("POST", "/user/apply-trainer", {
     role: "applicant",
     body: {
@@ -223,7 +223,7 @@ async function runTests() {
   }
 
   // 8. Forum
-  console.log("\n--- Forum ---");
+  // console.log("\n--- Forum ---");
   const post = await request("POST", "/forum/posts", {
     role: "trainer",
     body: {
@@ -266,29 +266,29 @@ async function runTests() {
   }
 
   // 9. Dashboard stats
-  console.log("\n--- Dashboard ---");
+  // console.log("\n--- Dashboard ---");
   await request("GET", "/admin/overview", { role: "admin", expectStatus: 200 });
   await request("GET", "/admin/transactions", { role: "admin", expectStatus: 200 });
   await request("GET", "/trainer/overview", { role: "trainer", expectStatus: 200 });
   await request("GET", "/user/overview", { role: "user", expectStatus: 200 });
 
   // 10. Admin trainers
-  console.log("\n--- Admin Trainers ---");
+  // console.log("\n--- Admin Trainers ---");
   await request("GET", "/admin/trainers", { role: "admin", expectStatus: 200 });
   await request("GET", "/admin/classes", { role: "admin", expectStatus: 200 });
 
   // 11. Logout
-  console.log("\n--- Logout ---");
+  // console.log("\n--- Logout ---");
   await request("POST", "/auth/logout", { expectStatus: 200 });
 
   // 12. 404
-  console.log("\n--- Error handling ---");
+  // console.log("\n--- Error handling ---");
   await request("GET", "/does-not-exist", { expectStatus: 404 });
 
-  console.log("\n=== Results ===");
-  console.log(`Passed: ${passed}`);
-  console.log(`Failed: ${failed}`);
-  console.log(`Total:  ${passed + failed}\n`);
+  // console.log("\n=== Results ===");
+  // console.log(`Passed: ${passed}`);
+  // console.log(`Failed: ${failed}`);
+  // console.log(`Total:  ${passed + failed}\n`);
 
   if (failed > 0) {
     process.exit(1);

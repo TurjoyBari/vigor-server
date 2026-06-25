@@ -92,13 +92,13 @@ function assertCommentOwner(comment, user) {
 async function createPost(user, payload) {
   const { title, description, image = null } = payload;
 
-  console.log("Create forum post body:", payload);
-  console.log("Create forum post user:", {
-    authorId: user.userId,
-    authorName: user.name,
-    authorEmail: user.email,
-    authorRole: user.role,
-  });
+  // console.log("Create forum post body:", payload);
+  // console.log("Create forum post user:", {
+  //   authorId: user.userId,
+  //   authorName: user.name,
+  //   authorEmail: user.email,
+  //   authorRole: user.role,
+  // });
 
   if (!title?.trim()) throw new AppError("Title is required", 400);
   if (!description?.trim()) throw new AppError("Description is required", 400);
@@ -133,10 +133,10 @@ async function createPost(user, payload) {
 
   const result = await posts.insertOne(doc);
 
-  console.log("Forum post insert result:", {
-    acknowledged: result.acknowledged,
-    insertedId: String(result.insertedId),
-  });
+  // console.log("Forum post insert result:", {
+  //   acknowledged: result.acknowledged,
+  //   insertedId: String(result.insertedId),
+  // });
 
   const created = await posts.findOne({ _id: result.insertedId });
 
@@ -210,12 +210,12 @@ async function deletePost(postId, user) {
   const post = await getPostDocument(postId);
   assertPostOwnerOrAdmin(post, user);
 
-  console.log("Delete forum post:", {
-    postId: String(post._id),
-    title: post.title,
-    authorRole: post.authorRole,
-    deletedBy: user.role,
-  });
+  // console.log("Delete forum post:", {
+  //   postId: String(post._id),
+  //   title: post.title,
+  //   authorRole: post.authorRole,
+  //   deletedBy: user.role,
+  // });
 
   const posts = getCollection(COLLECTIONS.FORUM_POSTS);
   const comments = getCollection(COLLECTIONS.COMMENTS);
@@ -225,10 +225,10 @@ async function deletePost(postId, user) {
     comments.deleteMany({ postId: post._id }),
   ]);
 
-  console.log("Forum post delete result:", {
-    post: postDeleteResult,
-    commentsRemoved: commentDeleteResult.deletedCount,
-  });
+  // console.log("Forum post delete result:", {
+  //   post: postDeleteResult,
+  //   commentsRemoved: commentDeleteResult.deletedCount,
+  // });
 
   return { id: String(post._id) };
 }

@@ -50,7 +50,7 @@ async function getPaymentsByUserId(userId) {
     .sort({ createdAt: -1 })
     .toArray();
 
-  console.log("Payments from DB for user:", userId, paymentList);
+  // console.log("Payments from DB for user:", userId, paymentList);
 
   return paymentList.map(serializePayment);
 }
@@ -105,7 +105,7 @@ async function createBookingSnapshot(userId, classId, classData) {
  * Create Stripe Checkout Session for a class booking.
  */
 async function createCheckoutSession(userId, classId) {
-  console.log("Creating Stripe session");
+  // console.log("Creating Stripe session");
 
   if (!classId) {
     throw new AppError("classId is required", 400);
@@ -149,7 +149,7 @@ async function createCheckoutSession(userId, classId) {
     cancel_url: `${CLIENT_URL}/payment/${classId}`,
   });
 
-  console.log("Checkout session:", session);
+  // console.log("Checkout session:", session);
 
   return {
     id: session.id,
@@ -161,7 +161,7 @@ async function createCheckoutSession(userId, classId) {
  * Fulfill a completed Checkout Session — save payment + booking separately.
  */
 async function fulfillCheckoutSession(session) {
-  console.log("Stripe Session:", session);
+  // console.log("Stripe Session:", session);
 
   const stripeSessionId = session.id;
 
@@ -211,11 +211,11 @@ async function fulfillCheckoutSession(session) {
   const paymentResult = await payments.insertOne(paymentDoc);
   const savedPayment = await payments.findOne({ _id: paymentResult.insertedId });
 
-  console.log("Payment saved:", savedPayment);
+  // console.log("Payment saved:", savedPayment);
 
   const savedBooking = await createBookingSnapshot(userId, classId, classData);
 
-  console.log("Booking saved:", savedBooking);
+  // console.log("Booking saved:", savedBooking);
 
   return serializePayment(savedPayment);
 }

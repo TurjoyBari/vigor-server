@@ -33,7 +33,7 @@ async function handleStripeWebhook(req, res) {
 
   if (event.type === "checkout.session.completed") {
     const session = event.data.object;
-    console.log("Payment completed:", event);
+    // console.log("Payment completed:", event);
 
     try {
       await paymentService.fulfillCheckoutSession(session);

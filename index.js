@@ -91,9 +91,9 @@ async function startServer() {
     await connectDB();
 
     server = app.listen(PORT, () => {
-      console.log(`VIGOR API running on http://localhost:${PORT}`);
-      console.log(`Environment: ${NODE_ENV}`);
-      console.log(`CORS origin: ${CLIENT_URL}`);
+      // console.log(`VIGOR API running on http://localhost:${PORT}`);
+      // console.log(`Environment: ${NODE_ENV}`);
+      // console.log(`CORS origin: ${CLIENT_URL}`);
     });
   } catch (error) {
     console.error("Failed to start server:", error);
@@ -102,7 +102,7 @@ async function startServer() {
 }
 
 function shutdown(signal) {
-  console.log(`\n${signal} received. Shutting down gracefully...`);
+  // console.log(`\n${signal} received. Shutting down gracefully...`);
 
   const finish = async () => {
     try {
@@ -115,7 +115,7 @@ function shutdown(signal) {
 
   if (server) {
     server.close(() => {
-      console.log("HTTP server closed.");
+      // console.log("HTTP server closed.");
       finish();
     });
   } else {

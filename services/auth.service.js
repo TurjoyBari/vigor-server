@@ -187,7 +187,7 @@ async function syncUserFromAuth(payload = {}) {
     throw new AppError("Failed to sync user account", 500);
   }
 
-  console.log("User status:", user.status);
+  // console.log("User status:", user.status);
 
   return user;
 }
@@ -291,7 +291,7 @@ async function getUserById(userId) {
     user = await users.findOne({ _id: user._id }, { projection: { password: 0 } });
   }
 
-  console.log("User status:", user.status);
+  // console.log("User status:", user.status);
 
   return serializeUser(user);
 }

@@ -121,7 +121,7 @@ async function applyTrainer(userId, payload) {
   const created = await applications.findOne({ _id: result.insertedId });
   const application = serializeApplication(created, user);
 
-  console.log("Application Submitted:", application);
+  // console.log("Application Submitted:", application);
 
   return application;
 }
@@ -230,10 +230,10 @@ async function reviewApplication(applicationId, { status, feedback = "" }) {
 
   if (status === APPLICATION_STATUS.APPROVED) {
     await syncBetterAuthUserRole(user, "trainer");
-    console.log("Application Approved:", applicationId);
-    console.log("User Role Updated:", String(application.userId));
+    // console.log("Application Approved:", applicationId);
+    // console.log("User Role Updated:", String(application.userId));
   } else {
-    console.log("Application Rejected:", applicationId);
+    // console.log("Application Rejected:", applicationId);
   }
 
   return serializeApplication(result, user);
@@ -271,7 +271,7 @@ async function getTrainers() {
     .toArray();
 
   list.forEach((trainer) => {
-    console.log("Trainer role:", trainer.role);
+    // console.log("Trainer role:", trainer.role);
   });
 
   return list.map(serializeUser);
@@ -293,7 +293,7 @@ async function demoteTrainer(trainerId) {
     throw new AppError("Trainer not found", 404);
   }
 
-  console.log("Trainer role:", target.role);
+  // console.log("Trainer role:", target.role);
 
   const result = await users.findOneAndUpdate(
     { _id: objectId, role: "trainer" },
@@ -313,7 +313,7 @@ async function demoteTrainer(trainerId) {
   await syncBetterAuthUserRole(result, "user");
 
   const demoted = serializeUser(result);
-  console.log("Demotion result:", demoted);
+  // console.log("Demotion result:", demoted);
 
   return demoted;
 }

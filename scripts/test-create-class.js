@@ -24,8 +24,8 @@ async function run() {
   }
 
   const trainerId = String(trainer._id);
-  console.log("\n=== Create Class DB Test ===\n");
-  console.log("Trainer:", trainer.name, `<${trainer.email}>`, "role:", trainer.role);
+  // console.log("\n=== Create Class DB Test ===\n");
+  // console.log("Trainer:", trainer.name, `<${trainer.email}>`, "role:", trainer.role);
 
   const payload = {
     className: `Test Class ${Date.now()}`,
@@ -39,21 +39,21 @@ async function run() {
   };
 
   const created = await classService.createClass(trainerId, payload);
-  console.log("\n--- serializeClass() ---");
-  console.log(created);
+  // console.log("\n--- serializeClass() ---");
+  // console.log(created);
 
   const classes = getCollection(COLLECTIONS.CLASSES);
   const fromDb = await classes.findOne({ _id: require("../utils/objectId").toObjectId(created.id) });
 
-  console.log("\n--- MongoDB document ---");
-  console.log({
-    trainerId: String(fromDb.trainerId),
-    trainerName: fromDb.trainerName,
-    className: fromDb.className,
-    status: fromDb.status,
-    bookingCount: fromDb.bookingCount,
-    price: fromDb.price,
-  });
+  // console.log("\n--- MongoDB document ---");
+  // console.log({
+  //   trainerId: String(fromDb.trainerId),
+  //   trainerName: fromDb.trainerName,
+  //   className: fromDb.className,
+  //   status: fromDb.status,
+  //   bookingCount: fromDb.bookingCount,
+  //   price: fromDb.price,
+  // });
 
   const { token } = await authService.createAuthToken(trainer);
   const BASE = process.env.API_TEST_URL || "http://localhost:5000/api";
@@ -70,10 +70,10 @@ async function run() {
   });
   const body = await res.json();
 
-  console.log("\n--- POST /api/trainer/classes ---");
-  console.log("Status:", res.status);
-  console.log("Message:", body.message);
-  console.log("Class id:", body.data?.class?.id);
+  // console.log("\n--- POST /api/trainer/classes ---");
+  // console.log("Status:", res.status);
+  // console.log("Message:", body.message);
+  // console.log("Class id:", body.data?.class?.id);
 
   await classes.deleteMany({
     className: { $regex: /^(Test Class|API Class) / },
@@ -83,7 +83,7 @@ async function run() {
     process.exit(1);
   }
 
-  console.log("\nPASS: Class creation works end-to-end.\n");
+  // console.log("\nPASS: Class creation works end-to-end.\n");
 }
 
 run()

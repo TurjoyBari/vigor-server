@@ -154,15 +154,15 @@ async function createClass(trainerId, payload) {
     description,
   } = payload;
 
-  console.log("Create class request:", {
-    trainerId,
-    className,
-    category,
-    difficulty,
-    duration,
-    schedule,
-    price,
-  });
+  // console.log("Create class request:", {
+  //   trainerId,
+  //   className,
+  //   category,
+  //   difficulty,
+  //   duration,
+  //   schedule,
+  //   price,
+  // });
 
   if (!className?.trim()) throw new AppError("Class name is required", 400);
   if (!category?.trim()) throw new AppError("Category is required", 400);
@@ -218,14 +218,14 @@ async function createClass(trainerId, payload) {
   const result = await classes.insertOne(doc);
   const created = await classes.findOne({ _id: result.insertedId });
 
-  console.log("Class Created from DB:", {
-    id: String(created._id),
-    trainerId: String(created.trainerId),
-    trainerName: created.trainerName,
-    className: created.className,
-    status: created.status,
-    bookingCount: created.bookingCount,
-  });
+  // console.log("Class Created from DB:", {
+  //   id: String(created._id),
+  //   trainerId: String(created.trainerId),
+  //   trainerName: created.trainerName,
+  //   className: created.className,
+  //   status: created.status,
+  //   bookingCount: created.bookingCount,
+  // });
 
   return serializeClass(created, trainer);
 }
@@ -251,11 +251,11 @@ async function getApprovedClasses(filters = {}) {
     status: CLASS_STATUSES.APPROVED,
   };
 
-  console.log(normalizedFilters);
+  // console.log(normalizedFilters);
 
   const query = buildClassQuery(normalizedFilters);
 
-  console.log(query);
+  // console.log(query);
 
   const page = Math.max(Number(filters.page) || 1, 1);
   const limit = Math.min(Math.max(Number(filters.limit) || 12, 1), 100);
@@ -269,12 +269,12 @@ async function getApprovedClasses(filters = {}) {
   const serialized = await attachTrainerNames(list);
   const totalPages = total === 0 ? 0 : Math.ceil(total / limit);
 
-  console.log({
-    total,
-    page,
-    totalPages,
-    returned: serialized.length,
-  });
+  // console.log({
+  //   total,
+  //   page,
+  //   totalPages,
+  //   returned: serialized.length,
+  // });
 
   return {
     classes: serialized,
@@ -378,7 +378,7 @@ async function deleteClass(classId, userId, role) {
  * Approve a class (admin) — updates MongoDB status to approved.
  */
 async function approveClass(classId) {
-  console.log("Approve class request:", classId);
+  // console.log("Approve class request:", classId);
 
   const classes = getCollection(COLLECTIONS.CLASSES);
   const result = await classes.findOneAndUpdate(
@@ -396,13 +396,13 @@ async function approveClass(classId) {
     throw new AppError("Class not found", 404);
   }
 
-  console.log("Class approved in DB:", {
-    id: String(result._id),
-    className: result.className,
-    trainerName: result.trainerName,
-    status: result.status,
-    updatedAt: result.updatedAt,
-  });
+  // console.log("Class approved in DB:", {
+  //   id: String(result._id),
+  //   className: result.className,
+  //   trainerName: result.trainerName,
+  //   status: result.status,
+  //   updatedAt: result.updatedAt,
+  // });
 
   return getClassById(String(result._id));
 }
@@ -411,7 +411,7 @@ async function approveClass(classId) {
  * Reject a class (admin) — updates MongoDB status to rejected.
  */
 async function rejectClass(classId) {
-  console.log("Reject class request:", classId);
+  // console.log("Reject class request:", classId);
 
   const classes = getCollection(COLLECTIONS.CLASSES);
   const result = await classes.findOneAndUpdate(
@@ -429,13 +429,13 @@ async function rejectClass(classId) {
     throw new AppError("Class not found", 404);
   }
 
-  console.log("Class rejected in DB:", {
-    id: String(result._id),
-    className: result.className,
-    trainerName: result.trainerName,
-    status: result.status,
-    updatedAt: result.updatedAt,
-  });
+  // console.log("Class rejected in DB:", {
+  //   id: String(result._id),
+  //   className: result.className,
+  //   trainerName: result.trainerName,
+  //   status: result.status,
+  //   updatedAt: result.updatedAt,
+  // });
 
   return getClassById(String(result._id));
 }
