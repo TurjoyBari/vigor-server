@@ -5,17 +5,7 @@ This server handles authentication, role-based access control, class management,
 
 ---
 
-## Live API
 
-Production API: Add deployed backend URL here
-
-Example:
-
-```bash
-https://your-vigor-server.onrender.com
-```
-
----
 
 ## Project Overview
 
